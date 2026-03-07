@@ -1,7 +1,7 @@
 ﻿namespace Graphs.Main.Enums;
 
-enum GraphType
+public enum GraphDirection
 {
-    Directed,
     Undirected,
+    Directed,
 }

@@ -1,66 +1,89 @@
-﻿// See https://aka.ms/new-console-template for more information
-using Graphs.Main.Builders;
-using Graphs.Main.Entities;
-using Graphs.Main.Enums;
+﻿using Graphs.Main.Builders;
+using Graphs.Main.Entities.Algorithms;
+using Graphs.Main.Entities.Graphs;
+using Graphs.Main.Helpers;
 
-List<string> states = new List<string>(["1", "2", "3", "4"]);
-List<Tuple<string, string>> relations = new List<Tuple<string, string>>
-    ([
-        Tuple.Create("1", "2"),
-        Tuple.Create("1", "3"),
-        Tuple.Create("2", "3"),
-        Tuple.Create("2", "4"),
-        Tuple.Create("3", "4")
-    ]);
+// Define vertices
+var states = new List<string> { "A", "B", "C", "D", "E", "F", "G", "H", "I", "J", "K" };
 
-GraphBuilder builder = GraphBuilder.Empty();
-
-Dictionary<string, Node> nodeMap = new Dictionary<string, Node>();
-
-builder.WithGraphType(GraphType.Directed);
-
-foreach (string state in states)
+// Define edges (from, to)
+var edges = new List<(string From, string To)>
 {
-    Node node = new Node(state);
-    builder.WithNode(node);
+    ("A", "B"),
+    ("A", "C"),
+    ("B", "D"),
+    ("B", "E"),
+    ("C", "F"),
+    ("C", "G"),
+    ("D", "H"),
+    ("E", "F"),
+    ("F", "I"),
+    ("G", "I"),
+    ("H", "C"), // Cycle back to C
+    ("I", "J"),
+    ("J", "K"),
+    ("K", "F"), // Cycle back to F
+    ("E", "G"), // Multiple paths to G
+    ("B", "G"), // Multiple paths to G
+    ("H", "I"), // Another path to I
+};
 
-    nodeMap.Add(state, node);
+// Build the graph
+var builder = GraphBuilder.Empty();
+builder.WithGraphDirection(GraphDirection.Directed);
+
+var vertexMap = new Dictionary<string, Vertex>();
+
+// Add vertices
+foreach (var state in states)
+{
+    var vertex = new Vertex<string>(state, "metadata");
+    builder.WithVertex(vertex);
+    vertexMap[state] = vertex;
 }
 
-foreach (Tuple<string, string> tuple in relations)
+// Add edges
+foreach (var (from, to) in edges)
 {
-    Node from = nodeMap[tuple.Item1];
-    Node to = nodeMap[tuple.Item2];
-    Relation relation = new Relation(from, to);
-    builder.WithRelation(relation);
+    var edge = new Edge(vertexMap[from], vertexMap[to]);
+    builder.WithEdge(edge);
 }
 
+// Build the graph
 Graph graph = builder.Build();
 
-Console.WriteLine("Graph adjacency matrix: ");
+// Print adjacency matrix
+Console.WriteLine("Graph adjacency matrix:");
+var matrix = graph.ToAdjacencyMatrix();
+MatrixHelpers.ShowMatrix<double?>(matrix);
 
-int[,] adjacencyMatrix = graph.ToAdjacencyMatrix();
-
-int rowLength = adjacencyMatrix.GetLength(0);
-int colLength = adjacencyMatrix.GetLength(1);
-
-for (int i = 0; i < rowLength; i++)
+// Print adjacency list
+Console.WriteLine("\nGraph adjacency list:");
+var adjacencyList = graph.ToAdjacencyList();
+foreach (var vertex in graph.Vertices)
 {
-    for (int j = 0; j < colLength; j++)
-    {
-        Console.Write(string.Format("{0} ", adjacencyMatrix[i, j]));
-    }
-
-    Console.WriteLine();
+    var neighbors = adjacencyList[vertex].Select(v => v.Name);
+    Console.WriteLine($"{vertex.Name} -> {string.Join(", ", neighbors)}");
 }
 
-Console.WriteLine();
-Console.WriteLine("Graph adjacency list: ");
+// Define start and end vertices
+Vertex startVertex = graph.Vertices[0];
+Vertex endVertex = graph.Vertices[graph.Vertices.Count - 1];
 
-Dictionary<Node, List<Node>> adjacencyList = graph.ToAdjacencyList();
-
-foreach (Node node in graph.Nodes)
+// List of path finding algorithms
+var algorithms = new List<PathFindingAlgorithm<Vertex>>
 {
-    List<string> adjancyListNames = adjacencyList[node].Select(node => node.Name).ToList();
-    Console.WriteLine($"{node.Name} -> {String.Join(",", adjancyListNames)}");
+    new DepthFirstSearchAlgorithm(),
+    new BreathFirstSearchAlgorithm(),
+};
+
+// Loop over algorithms and show results
+foreach (var algorithm in algorithms)
+{
+    Console.WriteLine($"\n=== {algorithm.Name} ===");
+    List<Vertex> path = algorithm.Find(startVertex, endVertex, graph);
+
+    Console.WriteLine($"Cost from {startVertex.Name} to {endVertex.Name}: {path.Count}");
+    string pathString = string.Join(" -> ", path.Select(v => v.Name));
+    Console.WriteLine($"Path: {pathString}");
 }

@@ -1,58 +1,73 @@
-﻿using Graphs.Main.Entities;
-using Graphs.Main.Enums;
+﻿using Graphs.Main.Entities.Graphs;
 
 namespace Graphs.Main.Builders;
 
 internal class GraphBuilder
 {
-    private GraphType _graphType;
-    private List<Node> _nodes = new List<Node>();
-    private List<Relation> _relations = new List<Relation>();
+    private List<Vertex> _vertices = new();
+    private List<Edge> _edges = new();
+    private GraphDirection _graphDirection;
+    private GraphFeatures _graphFeatues;
 
     private GraphBuilder() { }
 
-    public static GraphBuilder Empty() => new GraphBuilder();
+    public static GraphBuilder Empty() => new();
 
-    public GraphBuilder WithGraphType(GraphType graphType)
+    public GraphBuilder WithGraphDirection(GraphDirection graphDirection)
     {
-        _graphType = graphType;
+        _graphDirection = graphDirection;
         return this;
     }
 
-    public GraphBuilder WithNode(Node node)
+    public GraphBuilder WithGraphFeatures(GraphFeatures features)
     {
-        _nodes.Add(node);
+        _graphFeatues |= features;
         return this;
     }
 
-    public GraphBuilder WithNodes(IEnumerable<Node> nodes)
+    public GraphBuilder WithVertex(Vertex vertex)
     {
-        _nodes.AddRange(nodes);
+        _vertices.Add(vertex);
         return this;
     }
 
-    public GraphBuilder WithRelation(Relation relation)
+    public GraphBuilder WithVertices(IEnumerable<Vertex> vertices)
     {
-        _relations.Add(relation);
+        _vertices.AddRange(vertices);
         return this;
     }
 
-    public GraphBuilder WithRelations(IEnumerable<Relation> relations)
+    public GraphBuilder WithEdge(Edge edge)
     {
-        _relations.AddRange(relations);
+        _edges.Add(edge);
+        return this;
+    }
+
+    public GraphBuilder WithEdges(IEnumerable<Edge> edges)
+    {
+        _edges.AddRange(edges);
         return this;
     }
 
     public Graph Build()
     {
-        return _graphType switch
+        if (_graphFeatues == GraphFeatures.Weighted)
         {
-            GraphType.Undirected => new UndirectedGraph(_nodes, _relations),
-            GraphType.Directed => new DirectedGraph(_nodes, _relations),
-            _ => throw new ArgumentOutOfRangeException(
-                nameof(_graphType),
-                $"Not expected graph type value: {_graphType}"
-            ),
-        };
+            return _graphDirection switch
+            {
+                GraphDirection.Directed => new DirectedWeightedGraph(_vertices, _edges),
+                GraphDirection.Undirected => new UndirectedWeightedGraph(_vertices, _edges),
+                _ => throw new InvalidOperationException("Graph direction must be specified"),
+            };
+        }
+        else
+        {
+            return _graphDirection switch
+            {
+                GraphDirection.Directed => new DirectedGraph(_vertices, _edges),
+                GraphDirection.Undirected => new UndirectedGraph(_vertices, _edges),
+                _ => throw new InvalidOperationException("Graph direction must be specified"),
+            };
+        }
     }
 }
