@@ -74,7 +74,7 @@ Vertex endVertex = graph.Vertices[graph.Vertices.Count - 1];
 var algorithms = new List<PathFindingAlgorithm<Vertex>>
 {
     new DepthFirstSearchAlgorithm(),
-    new BreathFirstSearchAlgorithm(),
+    new BreadthFirstSearchAlgorithm(),
 };
 
 // Loop over algorithms and show results
@@ -86,4 +86,26 @@ foreach (var algorithm in algorithms)
     Console.WriteLine($"Cost from {startVertex.Name} to {endVertex.Name}: {path.Count}");
     string pathString = string.Join(" -> ", path.Select(v => v.Name));
     Console.WriteLine($"Path: {pathString}");
+}
+
+var stronglyConnectedComponentsAlgorithm = new StronglyConnectedComponentsAlgorithm();
+var components = stronglyConnectedComponentsAlgorithm.Find(graph);
+bool isConnected = components.Count == 1 && components[0].Count == graph.Vertices.Count;
+
+Console.WriteLine("\n=== Graph Connectivity ===");
+
+if (isConnected)
+{
+    Console.WriteLine("The graph is connected.");
+}
+else
+{
+    Console.WriteLine("The graph is not connected.");
+    Console.WriteLine("Maximal strongly connected components:");
+
+    for (int i = 0; i < components.Count; i++)
+    {
+        string componentVertices = string.Join(", ", components[i].Select(v => v.Name));
+        Console.WriteLine($"C{i + 1}: {componentVertices}");
+    }
 }
