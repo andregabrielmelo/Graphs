@@ -6,10 +6,15 @@
     <Nullable>enable</Nullable>
 
     <PackageId>Redakas.Graphs</PackageId>
-    <Version>1.0.2</Version>
+    <Version>1.0.3</Version>
     <Authors>André Melo</Authors>
     <Description>Graphs and path finding algorithms</Description>
     <PackageTags>graphs algorithms data-structures</PackageTags>
     <RepositoryUrl>https://github.com/andregabrielmelo/Graphs</RepositoryUrl>
+	<PackageLicenseFile>LICENSE.txt</PackageLicenseFile>
   </PropertyGroup>
+
+	<ItemGroup>
+		<None Include="../../LICENSE.txt" Pack="true" PackagePath=""/>
+	</ItemGroup>
 </Project>
