@@ -3,9 +3,9 @@ using Graphs.Main.Interfaces;
 
 namespace Graphs.Main.Entities.Algorithms;
 
-internal class BreathFirstSearchAlgorithm : PathFindingAlgorithm<Vertex>
+internal class BreadthFirstSearchAlgorithm : PathFindingAlgorithm<Vertex>
 {
-    public override string Name => "Breath First Search";
+    public override string Name => "Breadth First Search";
     public override string Description => throw new NotImplementedException();
 
     public override List<Vertex> Find(Vertex start, Vertex end, ISearchable<Vertex> graph)
