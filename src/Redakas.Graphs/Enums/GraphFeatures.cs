@@ -1,4 +1,4 @@
-﻿namespace Graphs.Main.Enums;
+﻿namespace Redakas.Graphs.Enums;
 
 [Flags]
 public enum GraphFeatures

@@ -1,6 +1,6 @@
-﻿namespace Graphs.Main.Entities.Algorithms;
+﻿namespace Redakas.Graphs.Algorithms.Entities;
 
-internal abstract class Algorithm<T, TResult>
+public abstract class Algorithm<T, TResult>
 {
     public abstract string Name { get; }
     public abstract string Description { get; }

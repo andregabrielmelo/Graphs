@@ -1,8 +1,8 @@
-﻿using Graphs.Main.Entities.Graphs;
+﻿using Redakas.Graphs.Entities;
 
-namespace Graphs.Main.Builders;
+namespace Redakas.Graphs.Builders;
 
-internal class GraphBuilder
+public class GraphBuilder
 {
     private List<Vertex> _vertices = new();
     private List<Edge> _edges = new();
