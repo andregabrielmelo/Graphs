@@ -4,9 +4,9 @@ using Redakas.Graphs.Interfaces;
 
 namespace Redakas.Graphs.Algorithms.Entities;
 
-public class BreathFirstSearchAlgorithm : PathFindingAlgorithm<Vertex>
+public class BreadthFirstSearchAlgorithm : PathFindingAlgorithm<Vertex>
 {
-    public override string Name => "Breath First Search";
+    public override string Name => "Breadth First Search";
     public override string Description => throw new NotImplementedException();
 
     public override List<Vertex> Find(Vertex start, Vertex end, IGraph<Vertex> graph)

@@ -1,6 +1,6 @@
-﻿using System.Data;
-using Redakas.Graphs.Helpers;
+﻿using Redakas.Graphs.Helpers;
 using Redakas.Graphs.Interfaces;
+using System.Data;
 
 namespace Redakas.Graphs.Entities;
 

@@ -1,6 +1,6 @@
-using Graphs.Main.Entities.Graphs;
+using Redakas.Graphs.Entities;
 
-namespace Graphs.Main.Entities.Algorithms;
+namespace Redakas.Graphs.Algorithms.Entities;
 
 internal class StronglyConnectedComponentsAlgorithm : Algorithm<Graph, List<List<Vertex>>>
 {
@@ -48,14 +48,14 @@ internal class StronglyConnectedComponentsAlgorithm : Algorithm<Graph, List<List
 
     private static void FillOrder(
         Vertex vertex,
-        Dictionary<Vertex, List<Vertex>> adjacencyList,
+        Dictionary<Vertex, List<(Vertex to, double weight)>> adjacencyList,
         HashSet<Vertex> visited,
         Stack<Vertex> orderedVertices
     )
     {
         visited.Add(vertex);
 
-        foreach (var neighbor in adjacencyList[vertex])
+        foreach (var neighbor in adjacencyList[vertex].Select(edge => edge.to))
         {
             if (!visited.Contains(neighbor))
             {
