@@ -3,15 +3,15 @@
 namespace Redakas.Graphs.Algorithms.Entities;
 
 public abstract class PathFindingAlgorithm<T>
-    : Algorithm<(T start, T end, IGraph<T> searchable), IEnumerable<T>>
+    : Algorithm<(T start, T end, IGraph searchable), IEnumerable<T>>
     where T : notnull
 {
-    public override List<T> Apply((T start, T end, IGraph<T> searchable) value)
+    public override List<T> Apply((T start, T end, IGraph searchable) value)
     {
         return Find(value.start, value.end, value.searchable);
     }
 
-    public abstract List<T> Find(T start, T end, IGraph<T> searchable);
+    public abstract List<T> Find(T start, T end, IGraph searchable);
 
     public static List<T> ReconstructPath(Dictionary<T, T?> visited, T start, T end)
     {

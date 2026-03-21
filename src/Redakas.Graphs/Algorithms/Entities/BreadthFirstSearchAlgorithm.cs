@@ -9,7 +9,7 @@ public class BreadthFirstSearchAlgorithm : PathFindingAlgorithm<Vertex>
     public override string Name => "Breadth First Search";
     public override string Description => throw new NotImplementedException();
 
-    public override List<Vertex> Find(Vertex start, Vertex end, IGraph<Vertex> graph)
+    public override List<Vertex> Find(Vertex start, Vertex end, IGraph graph)
     {
         var visited = new Dictionary<Vertex, Vertex?>();
         visited.Add(start, null);

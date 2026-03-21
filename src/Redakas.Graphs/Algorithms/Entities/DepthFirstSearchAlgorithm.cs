@@ -10,7 +10,7 @@ public class DepthFirstSearchAlgorithm : PathFindingAlgorithm<Vertex>
     public override string Description =>
         "Depth First Search (DFS) is a graph traversal algorithm that explores as far as possible along each branch before backtracking. It uses a stack data structure, either explicitly or through recursion, to keep track of the vertices to be explored. DFS can be used for various applications, such as finding connected components, topological sorting, and solving puzzles.";
 
-    public override List<Vertex> Find(Vertex start, Vertex end, IGraph<Vertex> graph)
+    public override List<Vertex> Find(Vertex start, Vertex end, IGraph graph)
     {
         var visited = new Dictionary<Vertex, Vertex?>();
         visited.Add(start, null);

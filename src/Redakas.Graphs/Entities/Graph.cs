@@ -28,14 +28,17 @@ public class Graph(
     /// Gets the collection of vertices that define the shape or structure of the object.
     /// </summary>
     public List<Vertex> Vertices { get; init; } = [.. Vertices];
+
     /// <summary>
     /// Gets the collection of edges associated with the graph.
     /// </summary>
     public List<Edge> Edges { get; init; } = [.. Edges];
+
     /// <summary>
     /// Gets the direction of the graph traversal.
     /// </summary>
     public GraphDirection Direction { get; init; } = GraphDirection;
+
     /// <summary>
     /// Gets the set of features supported by the graph instance.
     /// </summary>
@@ -45,14 +48,17 @@ public class Graph(
     /// Gets a value indicating whether the graph supports weighted edges.
     /// </summary>
     public bool IsWeighted => Features.HasFlag(GraphFeatures.Weighted);
+
     /// <summary>
     /// Gets a value indicating whether the graph is directed.
     /// </summary>
     public bool IsDirected => Direction == GraphDirection.Directed;
+
     /// <summary>
     /// Gets a value indicating whether the graph is undirected.
     /// </summary>
     public bool IsUndirected => Direction == GraphDirection.Undirected;
+
     /// <summary>
     /// Gets a value indicating whether all nodes in the network are fully reachable from each other.
     /// </summary>
