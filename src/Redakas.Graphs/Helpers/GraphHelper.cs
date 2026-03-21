@@ -21,7 +21,7 @@ public class GraphHelpers
         // Print the vertex names at the top (column headers)
         foreach (var vertex in graph.Vertices)
         {
-            Console.Write($"{vertex.Name, 10}"); // Adjust column width to 10
+            Console.Write($"{vertex.Name,  10}"); // Adjust column width to 10
         }
         Console.WriteLine();
 
@@ -32,7 +32,7 @@ public class GraphHelpers
         foreach (var fromVertex in graph.Vertices)
         {
             // Start with the row header (vertex name)
-            Console.Write($"{fromVertex.Name, 10}");
+            Console.Write($"{fromVertex.Name , 10}");
 
             // For each vertex, print "1" if there's an edge, else print "0"
             foreach (var toVertex in graph.Vertices)
@@ -40,7 +40,7 @@ public class GraphHelpers
                 bool hasEdge = graph.HasEdge(fromVertex, toVertex);
 
                 // You can also print edge weights or other values if desired
-                Console.Write($"{(hasEdge ? "1" : "0"), 10}"); // Use "1" or "0" for edges/no edges
+                Console.Write($"{(hasEdge ? "1" : "0" ), 10}"); // Use "1" or "0" for edges/no edges
             }
             Console.WriteLine(); // Move to the next line after each row
         }

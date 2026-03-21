@@ -1,17 +1,16 @@
 ﻿namespace Redakas.Graphs.Entities;
 
-public abstract record Vertex(string Name)
+public record Vertex(string name, object? Value = null)
 {
-    public abstract object? Value { get; }
+    public string Name { get; set; } = name;
+    public object? Value { get; set; } = Value;
+
     public Type ValueType => Value?.GetType() ?? typeof(object);
 
     public override string ToString() => Name;
 }
 
-public sealed record Vertex<T>(string Name, T TypedValue) : Vertex(Name)
+public sealed record Vertex<T>(string name, T typedValue) : Vertex(name, typedValue)
 {
-    public T ValueTyped => TypedValue;
-    public override object? Value => TypedValue;
-
-    public override string ToString() => Name;
+    public T ValueTyped => typedValue;
 }
