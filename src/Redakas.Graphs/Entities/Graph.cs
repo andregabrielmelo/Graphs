@@ -1,26 +1,71 @@
-﻿using Redakas.Graphs.Helpers;
+﻿using System.Data;
+using Redakas.Graphs.Helpers;
 using Redakas.Graphs.Interfaces;
-using System.Data;
 
 namespace Redakas.Graphs.Entities;
 
-public abstract class Graph(
+/// <summary>
+/// Represents an abstract graph structure composed of vertices and edges, supporting directed and undirected
+/// configurations as well as various graph features.
+/// </summary>
+/// <remarks>This class provides foundational graph operations and representations, including adjacency lists,
+/// adjacency matrices, reachability, and connectivity analysis. It is intended to be extended for specialized graph
+/// algorithms or behaviors. Thread safety is not guaranteed; concurrent modifications may result in undefined
+/// behavior.</remarks>
+/// <param name="Vertices">The collection of vertices that form the nodes of the graph. Each vertex must be unique within the graph.</param>
+/// <param name="Edges">The collection of edges that define connections between vertices. Each edge specifies its source and target
+/// vertices, and may include a weight.</param>
+/// <param name="GraphDirection">Specifies whether the graph is directed or undirected. Determines the interpretation of edge directionality.</param>
+/// <param name="GraphFeatures">Defines additional features supported by the graph, such as weighted edges or connectivity properties.</param>
+public class Graph(
     IEnumerable<Vertex> Vertices,
     IEnumerable<Edge> Edges,
     GraphDirection GraphDirection,
     GraphFeatures GraphFeatures
-) : IGraph<Vertex>
+) : IGraph, IDynamicGraph
 {
+    /// <summary>
+    /// Gets the collection of vertices that define the shape or structure of the object.
+    /// </summary>
     public List<Vertex> Vertices { get; init; } = [.. Vertices];
+    /// <summary>
+    /// Gets the collection of edges associated with the graph.
+    /// </summary>
     public List<Edge> Edges { get; init; } = [.. Edges];
+    /// <summary>
+    /// Gets the direction of the graph traversal.
+    /// </summary>
     public GraphDirection Direction { get; init; } = GraphDirection;
+    /// <summary>
+    /// Gets the set of features supported by the graph instance.
+    /// </summary>
     public GraphFeatures Features { get; init; } = GraphFeatures;
 
+    /// <summary>
+    /// Gets a value indicating whether the graph supports weighted edges.
+    /// </summary>
     public bool IsWeighted => Features.HasFlag(GraphFeatures.Weighted);
+    /// <summary>
+    /// Gets a value indicating whether the graph is directed.
+    /// </summary>
     public bool IsDirected => Direction == GraphDirection.Directed;
+    /// <summary>
+    /// Gets a value indicating whether the graph is undirected.
+    /// </summary>
     public bool IsUndirected => Direction == GraphDirection.Undirected;
+    /// <summary>
+    /// Gets a value indicating whether all nodes in the network are fully reachable from each other.
+    /// </summary>
+    /// <remarks>Use this property to determine if the network is fully connected. A value of <see
+    /// langword="true"/> indicates that every node can reach every other node without exception.</remarks>
     public bool IsConnected => ToReachabilityMatrix().Cast<double>().All(value => value == 1.0);
 
+    /// <summary>
+    /// Returns a string that represents the current graph, including its vertices, edges, direction, and features.
+    /// </summary>
+    /// <remarks>The returned string provides a human-readable overview of the graph's structure and
+    /// properties, which can be useful for debugging or logging purposes.</remarks>
+    /// <returns>A string containing a summary of the graph's vertices, edges, direction, and features.</returns>
     public override string ToString()
     {
         string verticesStr = string.Join(", ", Vertices.Select(v => v.ToString()));
@@ -272,7 +317,7 @@ public abstract class Graph(
     /// contains no strongly connected components, the list will be empty.</returns>
     public List<List<Vertex>> GetStronglyConnectedComponents()
     {
-        // TODO: Melhorar isso daqui
+        // TODO: Make this better. Use the algorithm in Redakas.Graphs\Algorithms\Entities\StronglyConnectedComponentsAlgorithm.cs
 
         // implement Tarjan's algorithm for finding strongly connected components in directed graphs
         var adjacencyList = ToAdjacencyList(); // your existing adjacency list
@@ -328,8 +373,97 @@ public abstract class Graph(
         return result;
     }
 
-    // Necessário para procurar o melhor caminho usando algoritmos de busca
-    IEnumerable<Vertex> IGraph<Vertex>.GetNeighbors(Vertex vertex)
+    /// <summary>
+    /// Determines whether the specified vertex exists in the graph.
+    /// </summary>
+    /// <param name="vertex">The vertex to locate in the graph. Cannot be null.</param>
+    /// <returns>true if the vertex exists in the graph; otherwise, false.</returns>
+    public bool HasVertex(Vertex vertex)
+    {
+        return Vertices.Contains(vertex);
+    }
+
+    /// <summary>
+    /// Determines whether an edge exists from the specified source vertex to the specified target vertex.
+    /// </summary>
+    /// <param name="from">The source vertex from which the edge would originate.</param>
+    /// <param name="to">The target vertex to which the edge would point.</param>
+    /// <returns>true if an edge exists from the specified source vertex to the specified target vertex; otherwise, false.</returns>
+    public bool HasEdge(Vertex from, Vertex to)
+    {
+        return Edges.Any(edge => edge.From == from && edge.To == to);
+    }
+
+    /// <summary>
+    /// Determines whether the specified edge exists in the collection of edges.
+    /// </summary>
+    /// <param name="edge">The edge to locate in the collection. Cannot be null.</param>
+    /// <returns>true if the specified edge exists in the collection; otherwise, false.</returns>
+    public bool HasEdge(Edge edge)
+    {
+        return Edges.Contains(edge);
+    }
+
+    public void AddVertex(Vertex vertex)
+    {
+        if (Vertices.Contains(vertex))
+        {
+            throw new InvalidOperationException(
+                $"Vertex {vertex.Name} already exists in the graph."
+            );
+        }
+        Vertices.Add(vertex);
+    }
+
+    public void RemoveVertex(Vertex vertex)
+    {
+        if (!Vertices.Contains(vertex))
+        {
+            throw new InvalidOperationException(
+                $"Vertex {vertex.Name} does not exist in the graph."
+            );
+        }
+        Vertices.Remove(vertex);
+        // Remove all edges connected to this vertex
+        Edges.RemoveAll(e => e.From.Equals(vertex) || e.To.Equals(vertex));
+    }
+
+    public void AddEdge(Edge edge)
+    {
+        if (Edges.Contains(edge))
+        {
+            throw new InvalidOperationException(
+                $"Edge from {edge.From.Name} to {edge.To.Name} already exists in the graph."
+            );
+        }
+        if (!Vertices.Contains(edge.From) || !Vertices.Contains(edge.To))
+        {
+            throw new InvalidOperationException(
+                $"Both vertices of the edge must exist in the graph. Missing vertex: {(Vertices.Contains(edge.From) ? edge.To.Name : edge.From.Name)}"
+            );
+        }
+        Edges.Add(edge);
+    }
+
+    public void RemoveEdge(Edge edge)
+    {
+        if (!Edges.Contains(edge))
+        {
+            throw new InvalidOperationException(
+                $"Edge from {edge.From.Name} to {edge.To.Name} does not exist in the graph."
+            );
+        }
+        Edges.Remove(edge);
+    }
+
+    // TODO: Melhorar isto daqui
+    /// <summary>
+    /// Returns an enumerable collection of vertices that are directly connected to the specified vertex.
+    /// </summary>
+    /// <param name="vertex">The vertex for which to retrieve neighboring vertices. Must be a valid vertex in the graph.</param>
+    /// <returns>An enumerable collection of vertices that are adjacent to the specified vertex. The collection is empty if the
+    /// vertex has no neighbors.</returns>
+    public IEnumerable<Vertex> GetNeighbors(Vertex vertex)
     {
         List<Vertex> neighbours = [.. ToAdjacencyList()[vertex].Select(edge => edge.To)];
         return neighbours;

@@ -52,7 +52,7 @@ MatrixHelpers.ShowMatrix<double>(adjacencyMatrix);
 
 // Print reachbility matrix (transitive closure)
 Console.WriteLine("\nGraph reachbility matrix:");
-var reachbilityMatrix = graph.ToReachbilityMatrix();
+var reachbilityMatrix = graph.ToReachabilityMatrix();
 MatrixHelpers.ShowMatrix<double>(reachbilityMatrix);
 
 // Print distance matrix
@@ -90,7 +90,7 @@ Vertex endVertex = graph.Vertices[graph.Vertices.Count - 1];
 var algorithms = new List<PathFindingAlgorithm<Vertex>>
 {
     new DepthFirstSearchAlgorithm(),
-    new BreathFirstSearchAlgorithm(),
+    new BreadthFirstSearchAlgorithm(),
     // TODO:
     //new DijkstraSearchAlgorithm(),
     //new GreedyBestFirstSearchAlgorithm(),

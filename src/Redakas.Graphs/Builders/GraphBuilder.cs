@@ -7,7 +7,7 @@ public class GraphBuilder
     private List<Vertex> _vertices = new();
     private List<Edge> _edges = new();
     private GraphDirection _graphDirection;
-    private GraphFeatures _graphFeatues;
+    private GraphFeatures _graphFeatures;
 
     private GraphBuilder() { }
 
@@ -21,7 +21,7 @@ public class GraphBuilder
 
     public GraphBuilder WithGraphFeatures(GraphFeatures features)
     {
-        _graphFeatues |= features;
+        _graphFeatures |= features;
         return this;
     }
 
@@ -51,23 +51,6 @@ public class GraphBuilder
 
     public Graph Build()
     {
-        if (_graphFeatues == GraphFeatures.Weighted)
-        {
-            return _graphDirection switch
-            {
-                GraphDirection.Directed => new DirectedWeightedGraph(_vertices, _edges),
-                GraphDirection.Undirected => new UndirectedWeightedGraph(_vertices, _edges),
-                _ => throw new InvalidOperationException("Graph direction must be specified"),
-            };
-        }
-        else
-        {
-            return _graphDirection switch
-            {
-                GraphDirection.Directed => new DirectedGraph(_vertices, _edges),
-                GraphDirection.Undirected => new UndirectedGraph(_vertices, _edges),
-                _ => throw new InvalidOperationException("Graph direction must be specified"),
-            };
-        }
+        return new Graph(_vertices, _edges, _graphDirection, _graphFeatures);
     }
 }

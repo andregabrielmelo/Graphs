@@ -1,14 +1,28 @@
 <Solution>
   <Folder Name="/Solution Items/">
     <File Path=".editorconfig" />
+    <File Path=".gitattributes" />
+    <File Path=".gitignore" />
+    <File Path="dotnet-tools.json" />
+    <File Path="LICENSE.txt" />
+    <File Path="README.md" />
   </Folder>
   <Folder Name="/src/">
-    <Project Path="src/Redakas.Graphs/Redakas.Graphs.csproj" Id="38d84916-792f-4a9f-a314-0a866be13eb0">
+    <Project
+      Path="src/Redakas.Graphs/Redakas.Graphs.csproj"
+      Id="38d84916-792f-4a9f-a314-0a866be13eb0"
+    >
       <BuildType Project="Release" />
     </Project>
   </Folder>
   <Folder Name="/tests/">
-    <Project Path="tests/Redakas.Graphs.RandomTests/Redakas.Graphs.Teste.csproj" Id="40782d0f-3d6e-43a4-8554-0926b035c3de" />
-    <Project Path="tests/Redakas.Graphs.Tests/Redakas.Graphs.Tests.csproj" Id="e724206a-ddec-4ea9-b321-7f3469f5ac96" />
+    <Project
+      Path="tests/Redakas.Graphs.RandomTests/Redakas.Graphs.Teste.csproj"
+      Id="40782d0f-3d6e-43a4-8554-0926b035c3de"
+    />
+    <Project
+      Path="tests/Redakas.Graphs.Tests/Redakas.Graphs.Tests.csproj"
+      Id="e724206a-ddec-4ea9-b321-7f3469f5ac96"
+    />
   </Folder>
 </Solution>

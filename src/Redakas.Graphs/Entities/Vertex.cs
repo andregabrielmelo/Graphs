@@ -12,4 +12,6 @@ public sealed record Vertex<T>(string Name, T TypedValue) : Vertex(Name)
 {
     public T ValueTyped => TypedValue;
     public override object? Value => TypedValue;
+
+    public override string ToString() => Name;
 }
