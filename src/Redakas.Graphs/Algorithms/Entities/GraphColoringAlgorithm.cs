@@ -1,118 +1,125 @@
-﻿using Redakas.Graphs.Interfaces;
+using Redakas.Graphs.Entities;
 
 namespace Redakas.Graphs.Algorithms.Entities;
 
-public abstract class GraphColoringAlgorithm<T> : Algorithm<IGraph graph, IEnumerable<T>>
-    where T : notnull
+public class GraphColoringAlgorithm : Algorithm<Graph, IEnumerable<ColoringStep>>
 {
-    public override List<T> Apply(IGraph value)
+    public override string Name => "Graph Coloring (DSATUR)";
+    public override string Description => "Heurística de coloração de vértices por grau de saturação.";
+
+    public override List<ColoringStep> Apply(Graph graph) => ColorGraph(graph);
+
+    public List<ColoringStep> ColorGraph(Graph graph)
     {
-        int[] colors = colorirGrafo(value);
+        var vertices = graph.Vertices;
+        int vertexCount = vertices.Count;
 
-        throw NotImplementedException();
-    }
+        var adjacencyMatrix = BuildIntMatrix(graph);
+        int[] vertexColors = new int[vertexCount];
+        int[] degrees = CalcularGrauVertices(adjacencyMatrix);
+        var steps = new List<ColoringStep>();
 
-    int[] colorirGrafo(int[,] graphAdjacencyMatrix, string[] vertices)
-    {
-        int quantidadeVertices = graphAdjacencyMatrix.GetLength(0);
+        // Inicialização: vértice com maior grau recebe cor 1
+        int indiceVerticeInicial = 0;
+        for (int i = 1; i < vertexCount; i++)
+            if (degrees[i] > degrees[indiceVerticeInicial])
+                indiceVerticeInicial = i;
 
-        // Arrays que vão ser usados para guardar as cores, graus e saturação de cada vertice
-        int[] verticesCores = new int[quantidadeVertices];
-        int[] verticesGraus = new int[quantidadeVertices];
-        int[] verticesSaturacao = new int[quantidadeVertices];
-        int[] cores = [];
+        vertexColors[indiceVerticeInicial] = 1;
+        steps.Add(new ColoringStep(vertices[indiceVerticeInicial], 1, 1));
 
-        // Enquanto todos os vertices não forem coloridos
-        while (verticesCores.Min() == 0)
+        // Iteração: enquanto houver vértice não colorido
+        while (vertexColors.Any(cor => cor == 0))
         {
-            verticesGraus = calcularGrauVertices(graphAdjacencyMatrix);
-            verticesSaturacao = calcularSaturacaoVertices(graphAdjacencyMatrix, verticesCores);
+            int[] saturacao = CalcularSaturacaoVertices(adjacencyMatrix, vertexColors);
 
-            // Pega o primeiro vértice com a maior saturação e maior grau
-            int saturacaoMaisAlta = verticesSaturacao.Max();
-            int indiceVerticeEscolhido;
-            int grauMaisAlto = 0;
-            for (int i = 0; i < quantidadeVertices; i++)
+            int indiceVerticeEscolhido = -1;
+            int saturacaoMaisAlta = -1;
+            int grauMaisAlto = -1;
+
+            for (int i = 0; i < vertexCount; i++)
             {
-                if (verticesSaturacao[i] == saturacaoMaisAlta && verticesGraus[i] > grauMaisAlto)
+                if (vertexColors[i] != 0)
+                    continue;
+
+                if (saturacao[i] > saturacaoMaisAlta ||
+                    (saturacao[i] == saturacaoMaisAlta && degrees[i] > grauMaisAlto))
                 {
                     indiceVerticeEscolhido = i;
-                    grauMaisAlto = verticesGraus[i];
+                    saturacaoMaisAlta = saturacao[i];
+                    grauMaisAlto = degrees[i];
                 }
             }
 
-            int corValidaParaVertice = obterCorValidaParaVertice(graphAdjacencyMatrix, verticesCores, indic);
-
-            verticesCores[indiceVerticeEscolhido] = corValidaParaVertice;
-
+            int corValida = ObterCorValidaParaVertice(adjacencyMatrix, vertexColors, indiceVerticeEscolhido);
+            vertexColors[indiceVerticeEscolhido] = corValida;
+            steps.Add(new ColoringStep(vertices[indiceVerticeEscolhido], corValida, steps.Count + 1));
         }
 
+        return steps;
     }
 
-    int[] calcularGrauVertices(int[,] graphAdjacencyMatrix)
+    private static int[,] BuildIntMatrix(Graph graph)
     {
-        int quantityOfVertices = graphAdjacencyMatrix.GetLength(0);
+        int vertexCount = graph.Vertices.Count;
+        double[,] doubleMatrix = graph.ToAdjacencyMatrix(sameVertex: 0.0, defaultValue: 0.0);
+        int[,] matrix = new int[vertexCount, vertexCount];
 
-        int[] verticesDegress = new int[quantityOfVertices];
+        for (int i = 0; i < vertexCount; i++)
+            for (int j = 0; j < vertexCount; j++)
+                matrix[i, j] = doubleMatrix[i, j] != 0.0 ? 1 : 0;
 
-        // Calcula o grau de cada vértice, somando os vertices adjacentes 
-        for (int i = 0; i < quantityOfVertices; i++)
-        {
-            int degree = 0;
-            for (int j = 0; j < quantityOfVertices; j++)
-            {
-                if (graphAdjacencyMatrix[i, j] == 1)
-                {
-                    degree++;
-                }
-            }
-            verticesDegress[i] = degree;
-        }
-
-        return verticesDegress;
+        return matrix;
     }
 
-    int[] calcularSaturacaoVertices(int[,] graphAdjacencyMatrix, int[] verticesColors)
+    private static int[] CalcularGrauVertices(int[,] adjacencyMatrix)
     {
-        int quantityOfVertices = graphAdjacencyMatrix.GetLength(0);
+        int vertexCount = adjacencyMatrix.GetLength(0);
+        int[] degrees = new int[vertexCount];
 
-        int[] verticesSaturation = new int[quantityOfVertices];
-        HashSet<int> adjacentColors = [];
+        for (int i = 0; i < vertexCount; i++)
+            for (int j = 0; j < vertexCount; j++)
+                if (adjacencyMatrix[i, j] == 1)
+                    degrees[i]++;
 
-        // Para cada vertice
-        for (int vertexIndex = 0; vertexIndex < quantityOfVertices; vertexIndex++)
-        {
-            for (int adjacentVertexIndex = 0; adjacentVertexIndex < quantityOfVertices; adjacentVertexIndex++)
-            {
-                // Pula o mesmo vértice
-                if (vertexIndex == adjacentVertexIndex)
-                {
-                    continue;
-                }
-
-                // Se o vertex é adjacente e tem uma cor, aumenta o grau de saturação
-                bool isVertexAdjacent = graphAdjacencyMatrix[vertexIndex, adjacentVertexIndex] == 1;
-                bool isVertexColored = verticesColors[adjacentVertexIndex] != 0;
-                if (isVertexAdjacent && isVertexColored)
-                {
-                    adjacentColors.Add(verticesColors[adjacentVertexIndex]);
-                }
-            }
-
-            verticesSaturation[vertexIndex] = adjacentColors.Count;
-        }
-
-        return verticesSaturation;
+        return degrees;
     }
 
-    int obterCorValidaParaVertice(int[,] graphAdjacencyMatrix, int[] verticesColors, int indiceVertice)
+    private static int[] CalcularSaturacaoVertices(int[,] adjacencyMatrix, int[] vertexColors)
     {
-        int quantityOfVertices = graphAdjacencyMatrix.GetLength(0);
+        int vertexCount = adjacencyMatrix.GetLength(0);
+        int[] saturation = new int[vertexCount];
 
-        // Pega a primeira cor que não está em um vértice adjacente
-        for (int i = 0; i < quantityOfVertices; i++)
+        for (int vertexIndex = 0; vertexIndex < vertexCount; vertexIndex++)
         {
+            if (vertexColors[vertexIndex] != 0)
+                continue;
 
+            var adjacentColors = new HashSet<int>(); // resetado por vértice
+
+            for (int neighborIndex = 0; neighborIndex < vertexCount; neighborIndex++)
+                if (adjacencyMatrix[vertexIndex, neighborIndex] == 1 && vertexColors[neighborIndex] != 0)
+                    adjacentColors.Add(vertexColors[neighborIndex]);
+
+            saturation[vertexIndex] = adjacentColors.Count;
         }
+
+        return saturation;
+    }
+
+    private static int ObterCorValidaParaVertice(int[,] adjacencyMatrix, int[] vertexColors, int vertexIndex)
+    {
+        int vertexCount = adjacencyMatrix.GetLength(0);
+        var coresUsadas = new HashSet<int>();
+
+        for (int neighborIndex = 0; neighborIndex < vertexCount; neighborIndex++)
+            if (adjacencyMatrix[vertexIndex, neighborIndex] == 1 && vertexColors[neighborIndex] != 0)
+                coresUsadas.Add(vertexColors[neighborIndex]);
+
+        int cor = 1;
+        while (coresUsadas.Contains(cor))
+            cor++;
+
+        return cor;
     }
 }
