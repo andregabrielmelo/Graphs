@@ -100,7 +100,7 @@ public class UnitTest1
         var algorithms = new List<PathFindingAlgorithm<Vertex>>
         {
             new DepthFirstSearchAlgorithm(),
-            new BreathFirstSearchAlgorithm(),
+            new BreadthFirstSearchAlgorithm(),
             // TODO:
             //new DijkstraSearchAlgorithm(),
             //new GreedyBestFirstSearchAlgorithm(),
