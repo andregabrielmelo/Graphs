@@ -12,6 +12,12 @@
 
         <!-- Painel esquerdo: gerenciamento do grafo -->
         <StackPanel Grid.Column="0" Margin="10">
+            <TextBlock Text="Tipo de Grafo" FontWeight="Bold" Margin="0,0,0,4"/>
+            <RadioButton x:Name="undirectedRadio" Content="Não-dirigido" IsChecked="True"
+                         Checked="GraphDirection_Changed" Margin="0,0,0,2"/>
+            <RadioButton x:Name="directedRadio"   Content="Dirigido"
+                         Checked="GraphDirection_Changed" Margin="0,0,0,12"/>
+
             <TextBlock Text="Vértices" FontWeight="Bold" Margin="0,0,0,4"/>
             <Label Content="Nome:"/>
             <TextBox x:Name="vertexNameInput" Margin="0,0,0,4"/>

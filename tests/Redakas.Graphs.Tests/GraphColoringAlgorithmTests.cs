@@ -106,4 +106,24 @@ public class GraphColoringAlgorithmTests
         foreach (var vertex in graph.Vertices)
             Assert.Contains(vertex, coloredVertices);
     }
+
+    [Fact]
+    public void ColorGraph_DirectedEdge_AdjacentVerticesGetDifferentColors()
+    {
+        var vertexA = new Vertex("A");
+        var vertexB = new Vertex("B");
+        var edge = new Edge(vertexA, vertexB); // A → B only
+        var graph = new Graph(
+            new List<Vertex> { vertexA, vertexB },
+            new List<Edge> { edge },
+            GraphDirection.Directed,
+            GraphFeatures.None);
+
+        var algorithm = new GraphColoringAlgorithm();
+        var steps = algorithm.ColorGraph(graph).ToList();
+
+        int colorA = steps.First(s => s.Vertex == vertexA).Color;
+        int colorB = steps.First(s => s.Vertex == vertexB).Color;
+        Assert.NotEqual(colorA, colorB);
+    }
 }

@@ -36,6 +36,20 @@ public partial class MainWindow : Window
 
     private void GraphCanvas_SizeChanged(object sender, SizeChangedEventArgs e) => DrawGraph();
 
+    private void GraphDirection_Changed(object sender, RoutedEventArgs e)
+    {
+        // Guard: fires during InitializeComponent before named elements are ready
+        if (directedRadio is null) return;
+
+        GraphDirection direction = directedRadio.IsChecked == true
+            ? GraphDirection.Directed
+            : GraphDirection.Undirected;
+
+        _graph = new Graph([], [], direction, GraphFeatures.None);
+        ResetColoring();
+        DrawGraph();
+    }
+
     // ── Desenho ──────────────────────────────────────────────────────────────
 
     private void DrawGraph()
@@ -64,7 +78,7 @@ public partial class MainWindow : Window
         foreach (var edge in _graph.Edges)
         {
             Point edgeStart = vertexPositions[edge.From];
-            Point edgeEnd = vertexPositions[edge.To];
+            Point edgeEnd   = vertexPositions[edge.To];
 
             graphCanvas.Children.Add(new Line
             {
@@ -73,6 +87,35 @@ public partial class MainWindow : Window
                 Stroke = Brushes.DarkGray,
                 StrokeThickness = 2
             });
+
+            if (_graph.Direction == GraphDirection.Directed)
+            {
+                double edgeAngle = Math.Atan2(edgeEnd.Y - edgeStart.Y, edgeEnd.X - edgeStart.X);
+                const double arrowLength = 14;
+                const double arrowAngle  = Math.PI / 7; // ~25.7°
+
+                // Place arrowhead tip at the vertex border (not its center)
+                double tipX = edgeEnd.X - (ellipseSize / 2) * Math.Cos(edgeAngle);
+                double tipY = edgeEnd.Y - (ellipseSize / 2) * Math.Sin(edgeAngle);
+
+                double base1X = tipX - arrowLength * Math.Cos(edgeAngle - arrowAngle);
+                double base1Y = tipY - arrowLength * Math.Sin(edgeAngle - arrowAngle);
+                double base2X = tipX - arrowLength * Math.Cos(edgeAngle + arrowAngle);
+                double base2Y = tipY - arrowLength * Math.Sin(edgeAngle + arrowAngle);
+
+                graphCanvas.Children.Add(new Polygon
+                {
+                    Points = new PointCollection
+                    {
+                        new Point(tipX,   tipY),
+                        new Point(base1X, base1Y),
+                        new Point(base2X, base2Y)
+                    },
+                    Fill = Brushes.DarkGray,
+                    Stroke = Brushes.DarkGray,
+                    StrokeThickness = 2
+                });
+            }
         }
 
         foreach (var vertex in _graph.Vertices)

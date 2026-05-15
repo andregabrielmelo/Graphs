@@ -18,7 +18,7 @@ public class GraphColoringAlgorithm : Algorithm<Graph, IEnumerable<ColoringStep>
         // Se existir conexão entre dois vértices:
         // 1 = conectado
         // 0 = não conectado
-        var adjacencyMatrix = graph.ToAdjacencyMatrix(0, 0);
+        var adjacencyMatrix = BuildIntMatrix(graph);
 
         // Vetor que armazena a cor de cada vértice.
         // 0 significa "não colorido".
@@ -175,5 +175,21 @@ public class GraphColoringAlgorithm : Algorithm<Graph, IEnumerable<ColoringStep>
 
         // Retorna a menor cor válida encontrada.
         return cor;
+    }
+
+    private static double[,] BuildIntMatrix(Graph graph)
+    {
+        var matrix = graph.ToAdjacencyMatrix(sameVertex: 0.0, defaultValue: 0.0);
+        int n = graph.Vertices.Count;
+
+        // Treat directed edges as bidirectional for coloring conflict purposes.
+        // If there's an edge from i to j, also mark j to i so the adjacency
+        // relationship is symmetric (both vertices are considered adjacent).
+        for (int i = 0; i < n; i++)
+            for (int j = 0; j < n; j++)
+                if (matrix[i, j] != 0)
+                    matrix[j, i] = matrix[i, j];
+
+        return matrix;
     }
 }
