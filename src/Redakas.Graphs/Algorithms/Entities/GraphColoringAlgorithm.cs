@@ -142,7 +142,7 @@ public class GraphColoringAlgorithm : Algorithm<Graph, IEnumerable<ColoringStep>
             for (int neighborIndex = 0; neighborIndex < vertexCount; neighborIndex++)
                 // Se existe aresta E o vizinho já possui cor,
                 // adiciona essa cor ao conjunto.
-                if (adjacencyMatrix[vertexIndex, neighborIndex] == 1 && vertexColors[neighborIndex] != 0)
+                if ((adjacencyMatrix[vertexIndex, neighborIndex] == 1 || adjacencyMatrix[neighborIndex, vertexIndex] == 1) && vertexColors[neighborIndex] != 0)
                     adjacentColors.Add(vertexColors[neighborIndex]);
 
             // O grau de saturação é a quantidade
@@ -162,7 +162,7 @@ public class GraphColoringAlgorithm : Algorithm<Graph, IEnumerable<ColoringStep>
 
         // Descobre quais cores os vizinhos estão usando.
         for (int neighborIndex = 0; neighborIndex < vertexCount; neighborIndex++)
-            if (adjacencyMatrix[vertexIndex, neighborIndex] == 1 && vertexColors[neighborIndex] != 0)
+            if ((adjacencyMatrix[vertexIndex, neighborIndex] == 1 || adjacencyMatrix[neighborIndex, vertexIndex] == 1) && vertexColors[neighborIndex] != 0)
                 coresUsadas.Add(vertexColors[neighborIndex]);
 
         // Começa tentando usar a cor 1.
