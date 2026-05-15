@@ -8,25 +8,10 @@
     <File Path="README.md" />
   </Folder>
   <Folder Name="/src/">
-    <Project
-      Path="src/Redakas.Graphs/Redakas.Graphs.csproj"
-      Id="38d84916-792f-4a9f-a314-0a866be13eb0"
-    >
+    <Project Path="src/Graphs.Main/Graphs.Main.csproj" Id="b7c3d2e1-f4a5-4b6c-9d8e-0f1a2b3c4d5e" />
+    <Project Path="src/Redakas.Graphs/Redakas.Graphs.csproj" Id="38d84916-792f-4a9f-a314-0a866be13eb0">
       <BuildType Project="Release" />
     </Project>
-    <Project
-      Path="src/Graphs.Main/Graphs.Main.csproj"
-      Id="b7c3d2e1-f4a5-4b6c-9d8e-0f1a2b3c4d5e"
-    />
   </Folder>
-  <Folder Name="/tests/">
-    <Project
-      Path="tests/Redakas.Graphs.RandomTests/Redakas.Graphs.Teste.csproj"
-      Id="40782d0f-3d6e-43a4-8554-0926b035c3de"
-    />
-    <Project
-      Path="tests/Redakas.Graphs.Tests/Redakas.Graphs.Tests.csproj"
-      Id="e724206a-ddec-4ea9-b321-7f3469f5ac96"
-    />
-  </Folder>
+  <Folder Name="/tests/" />
 </Solution>
