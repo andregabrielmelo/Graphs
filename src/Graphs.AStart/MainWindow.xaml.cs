@@ -14,7 +14,7 @@ public partial class MainWindow : Window
 {
     private static readonly string[] _capitais =
     [
-        "Aracajú",
+        "Aracaju",
         "Belém",
         "Belo Horizonte",
         "Boa Vista",
@@ -36,21 +36,20 @@ public partial class MainWindow : Window
         "Rio Branco",
         "Rio de Janeiro",
         "Salvador",
-        "São Luis",
+        "São Luís",
         "São Paulo",
         "Teresina",
         "Vitória"
     ];
 
     private Graph _graph = new([], [], GraphDirection.Undirected, GraphFeatures.Weighted);
+    private Graph _graphWithDefaultWeights = new([], [], GraphDirection.Undirected, GraphFeatures.Weighted);
 
     private List<Vertex> _normalPath = [];
     private List<Vertex> _trafficPath = [];
 
     private int _currentStep = 0;
     private bool _trafficMode = false;
-
-    private readonly Dictionary<Vertex, Point> _vertexPositions = new();
 
     private readonly Dictionary<Edge, double> _originalWeights = new();
 
@@ -94,12 +93,8 @@ public partial class MainWindow : Window
 
         _heuristicDistances = distanciasEmLinhaReta;
 
-        // =====================================================
         // Cria os vértices
-        // =====================================================
-
         _verticesByName.Clear();
-
         foreach (string capital in _capitais)
         {
             var vertex = new Vertex(capital);
@@ -107,12 +102,8 @@ public partial class MainWindow : Window
             _verticesByName[capital] = vertex;
         }
 
-        // =====================================================
         // Cria as arestas
-        // =====================================================
-
         List<Edge> edges = [];
-
         foreach (var origem in distancias)
         {
             string cidadeOrigem = origem.Key;
@@ -138,10 +129,7 @@ public partial class MainWindow : Window
             }
         }
 
-        // =====================================================
         // Cria o grafo
-        // =====================================================
-
         _graph = new Graph(
             _verticesByName.Values,
             edges,
@@ -149,22 +137,15 @@ public partial class MainWindow : Window
             GraphFeatures.Weighted
         );
 
-        // =====================================================
         // Guarda pesos originais
-        // =====================================================
-
         _originalWeights.Clear();
-
         foreach (var edge in _graph.Edges)
         {
             if (!_originalWeights.ContainsKey(edge))
                 _originalWeights[edge] = edge.Weight;
         }
 
-        // =====================================================
         // Popular comboboxes
-        // =====================================================
-
         originComboBox.ItemsSource = _capitais;
         destinationComboBox.ItemsSource = _capitais;
 
@@ -173,10 +154,7 @@ public partial class MainWindow : Window
 
         statusText.Text =
             $"Grafo carregado com {_graph.Vertices.Count} capitais e {_graph.Edges.Count} arestas.";
-
-        DrawGraph();
     }
-
 
     private void PopulateCapitalCombos()
     {
@@ -236,8 +214,16 @@ public partial class MainWindow : Window
         openList.Items.Clear();
         closedList.Items.Clear();
 
-        // TODO:
-        // Executar algoritmo A*
+        // Passe a heuristica a ser utilizada quando se inicializa o algoritimo A*
+        PathFindingAlgorithm<Vertex> _AStarAlgorithm = new AStar(
+            (start, end) => _heuristicDistances[start.Name][end.Name]
+        );
+
+        List<Vertex> route = _AStarAlgorithm.Find(_origin, _destination, _graph);
+        List<Vertex> routeWithDefaultWeight = _AStarAlgorithm.Find(_origin, _destination, _graphWithDefaultWeights);
+
+        ShowPath(route, false);
+        ShowPath(routeWithDefaultWeight, true);
     }
 
     private void Reset_Click(object sender, RoutedEventArgs e)

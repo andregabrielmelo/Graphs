@@ -1,31 +1,31 @@
 {
-  "Aracajú": {
-    "Aracajú": 0
+  "Aracaju": {
+    "Aracaju": 0
   },
   "Belém": {
-    "Aracajú": 2079,
+    "Aracaju": 2079,
     "Belém": 0
   },
   "Belo Horizonte": {
-    "Aracajú": 1578,
+    "Aracaju": 1578,
     "Belém": 2824,
     "Belo Horizonte": 0
   },
   "Boa Vista": {
-    "Aracajú": 6000,
+    "Aracaju": 6000,
     "Belém": 6083,
     "Belo Horizonte": 4736,
     "Boa Vista": 0
   },
   "Brasília": {
-    "Aracajú": 1652,
+    "Aracaju": 1652,
     "Belém": 2120,
     "Belo Horizonte": 716,
     "Boa Vista": 4275,
     "Brasília": 0
   },
   "Campo Grande": {
-    "Aracajú": 2765,
+    "Aracaju": 2765,
     "Belém": 2942,
     "Belo Horizonte": 1453,
     "Boa Vista": 3836,
@@ -33,7 +33,7 @@
     "Campo Grande": 0
   },
   "Cuiabá": {
-    "Aracajú": 2775,
+    "Aracaju": 2775,
     "Belém": 2941,
     "Belo Horizonte": 1594,
     "Boa Vista": 3142,
@@ -42,7 +42,7 @@
     "Cuiabá": 0
   },
   "Curitiba": {
-    "Aracajú": 2595,
+    "Aracaju": 2595,
     "Belém": 3193,
     "Belo Horizonte": 1004,
     "Boa Vista": 4821,
@@ -52,7 +52,7 @@
     "Curitiba": 0
   },
   "Florianópolis": {
-    "Aracajú": 2892,
+    "Aracaju": 2892,
     "Belém": 3500,
     "Belo Horizonte": 1301,
     "Boa Vista": 5128,
@@ -63,7 +63,7 @@
     "Florianópolis": 0
   },
   "Fortaleza": {
-    "Aracajú": 1183,
+    "Aracaju": 1183,
     "Belém": 1610,
     "Belo Horizonte": 2528,
     "Boa Vista": 6548,
@@ -75,7 +75,7 @@
     "Fortaleza": 0
   },
   "Goiânia": {
-    "Aracajú": 1848,
+    "Aracaju": 1848,
     "Belém": 2017,
     "Belo Horizonte": 906,
     "Boa Vista": 4076,
@@ -88,7 +88,7 @@
     "Goiânia": 0
   },
   "João Pessoa": {
-    "Aracajú": 611,
+    "Aracaju": 611,
     "Belém": 2161,
     "Belo Horizonte": 2171,
     "Boa Vista": 6593,
@@ -105,7 +105,7 @@
     "Macapá": 0
   },
   "Maceió": {
-    "Aracajú": 294,
+    "Aracaju": 294,
     "Belém": 2173,
     "Belo Horizonte": 1854,
     "Boa Vista": 6279,
@@ -120,7 +120,7 @@
     "Maceió": 0
   },
   "Manaus": {
-    "Aracajú": 5215,
+    "Aracaju": 5215,
     "Belém": 5298,
     "Belo Horizonte": 3951,
     "Boa Vista": 785,
@@ -136,7 +136,7 @@
     "Manaus": 0
   },
   "Natal": {
-    "Aracajú": 788,
+    "Aracaju": 788,
     "Belém": 2108,
     "Belo Horizonte": 2348,
     "Boa Vista": 6770,
@@ -153,7 +153,7 @@
     "Natal": 0
   },
   "Palmas": {
-    "Aracajú": 1662,
+    "Aracaju": 1662,
     "Belém": 1283,
     "Belo Horizonte": 1690,
     "Boa Vista": 4926,
@@ -171,7 +171,7 @@
     "Palmas": 0
   },
   "Porto Alegre": {
-    "Aracajú": 3296,
+    "Aracaju": 3296,
     "Belém": 3852,
     "Belo Horizonte": 1712,
     "Boa Vista": 5348,
@@ -190,7 +190,7 @@
     "Porto Alegre": 0
   },
   "Porto Velho": {
-    "Aracajú": 4230,
+    "Aracaju": 4230,
     "Belém": 4397,
     "Belo Horizonte": 3050,
     "Boa Vista": 1686,
@@ -209,7 +209,7 @@
     "Porto Velho": 0
   },
   "Recife": {
-    "Aracajú": 501,
+    "Aracaju": 501,
     "Belém": 2074,
     "Belo Horizonte": 2061,
     "Boa Vista": 6483,
@@ -230,7 +230,7 @@
     "Recife": 0
   },
   "Rio Branco": {
-    "Aracajú": 4763,
+    "Aracaju": 4763,
     "Belém": 4931,
     "Belo Horizonte": 3584,
     "Boa Vista": 2230,
@@ -252,7 +252,7 @@
     "Rio Branco": 0
   },
   "Rio de Janeiro": {
-    "Aracajú": 1855,
+    "Aracaju": 1855,
     "Belém": 3250,
     "Belo Horizonte": 434,
     "Boa Vista": 5159,
@@ -275,7 +275,7 @@
     "Rio de Janeiro": 0
   },
   "Salvador": {
-    "Aracajú": 356,
+    "Aracaju": 356,
     "Belém": 2100,
     "Belo Horizonte": 1372,
     "Boa Vista": 5794,
@@ -298,8 +298,8 @@
     "Rio de Janeiro": 1649,
     "Salvador": 0
   },
-  "São Luis": {
-    "Aracajú": 1578,
+  "São Luís": {
+    "Aracaju": 1578,
     "Belém": 806,
     "Belo Horizonte": 2738,
     "Boa Vista": 6120,
@@ -321,10 +321,10 @@
     "Rio Branco": 4968,
     "Rio de Janeiro": 3015,
     "Salvador": 1599,
-    "São Luis": 0
+    "São Luís": 0
   },
   "São Paulo": {
-    "Aracajú": 2187,
+    "Aracaju": 2187,
     "Belém": 2933,
     "Belo Horizonte": 586,
     "Boa Vista": 4756,
@@ -346,11 +346,11 @@
     "Rio Branco": 3604,
     "Rio de Janeiro": 429,
     "Salvador": 1962,
-    "São Luis": 2970,
+    "São Luís": 2970,
     "São Paulo": 0
   },
   "Teresina": {
-    "Aracajú": 1142,
+    "Aracaju": 1142,
     "Belém": 947,
     "Belo Horizonte": 2302,
     "Boa Vista": 6052,
@@ -372,12 +372,12 @@
     "Rio Branco": 4900,
     "Rio de Janeiro": 2579,
     "Salvador": 1163,
-    "São Luis": 446,
+    "São Luís": 446,
     "São Paulo": 2792,
     "Teresina": 0
   },
   "Vitória": {
-    "Aracajú": 1408,
+    "Aracaju": 1408,
     "Belém": 3108,
     "Belo Horizonte": 524,
     "Boa Vista": 5261,
@@ -399,7 +399,7 @@
     "Rio Branco": 4109,
     "Rio de Janeiro": 521,
     "Salvador": 1202,
-    "São Luis": 2607,
+    "São Luís": 2607,
     "São Paulo": 882,
     "Teresina": 2171,
     "Vitória": 0
