@@ -36,7 +36,7 @@ public class UnitTest1
         // Add vertices
         foreach (var state in states)
         {
-            var vertex = new Vertex<string>(state, "metadata");
+            var vertex = new Vertex<string>(state, typedValue: "metadata");
             builder.WithVertex(vertex);
             vertexMap[state] = vertex;
         }

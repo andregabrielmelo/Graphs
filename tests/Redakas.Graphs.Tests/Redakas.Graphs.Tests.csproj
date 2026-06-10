@@ -20,4 +20,11 @@
   <ItemGroup>
     <Using Include="Xunit" />
   </ItemGroup>
+
+  <!-- Dados das capitais (projeto Graphs.AStart) — só copia no build, não duplica -->
+  <ItemGroup>
+    <None Include="..\..\src\Graphs.AStart\data\*.json"
+          CopyToOutputDirectory="PreserveNewest"
+          LinkBase="data" />
+  </ItemGroup>
 </Project>
