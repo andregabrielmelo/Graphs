@@ -1,10 +1,28 @@
-﻿using Redakas.Graphs.Entities;
+using Redakas.Graphs.Entities;
 using Redakas.Graphs.Interfaces;
 
 namespace Redakas.Graphs.Algorithms.Entities;
 
 public class AStar : PathFindingAlgorithm<Vertex>
 {
+    // Heurística injetada: estimativa H(atual, destino). Null = Manhattan via Position.
+    private readonly Func<Vertex, Vertex, double>? _heuristica;
+    private readonly List<AStarStep> _steps = [];
+
+    /// <summary>
+    /// Etapas da última execução de <see cref="Find"/>: a cada iteração, o nó fechado
+    /// e o snapshot das listas aberta/fechada (formato dos slides do professor).
+    /// </summary>
+    public IReadOnlyList<AStarStep> Steps => _steps;
+
+    public AStar() { }
+
+    /// <param name="heuristica">
+    /// Estimativa H(atual, destino), ex.: distância em linha reta.
+    /// Null = Manhattan via Position (comportamento original).
+    /// </param>
+    public AStar(Func<Vertex, Vertex, double>? heuristica) => _heuristica = heuristica;
+
     public override string Name => "A*";
 
     public override string Description =>
@@ -12,6 +30,8 @@ public class AStar : PathFindingAlgorithm<Vertex>
 
     public override List<Vertex> Find(Vertex start, Vertex end, IGraph searchable)
     {
+        _steps.Clear();
+
         // Armazena os nós a serem analisados
         var listaAberta = new List<Vertex> { start };
         // Armazena os nós já analisados para evitar voltar a um nó já analisado, ou andar em círculo
@@ -29,6 +49,7 @@ public class AStar : PathFindingAlgorithm<Vertex>
         // Calcula as informações iniciais para o nó de início
         gScore[start] = 0;
         fScore[start] = Heuristica(start, end);
+        pais[start] = null;
 
         // Enquanto houver nós para analisar
         while (listaAberta.Count > 0)
@@ -37,13 +58,18 @@ public class AStar : PathFindingAlgorithm<Vertex>
             Vertex atual = listaAberta
                 .MinBy(v => fScore.GetValueOrDefault(v, double.MaxValue))!;
 
-            // Se chegamos ao destino, reconstruímos o caminho a partir dos pais
-            if (atual == end)
-                return ReconstructPath(pais, start, atual);
-
             // Move o nó atual da lista aberta para a lista fechada
             listaAberta.Remove(atual);
             listaFechada.Add(atual);
+
+            // Registra a etapa (nó fechado + snapshot das listas) para acompanhamento
+            double g = gScore.GetValueOrDefault(atual, double.MaxValue);
+            double h = Heuristica(atual, end);
+            _steps.Add(new AStarStep(atual, g, h, g + h, [.. listaAberta], [.. listaFechada]));
+
+            // Se chegamos ao destino, reconstruímos o caminho a partir dos pais
+            if (atual == end)
+                return ReconstructPath(pais, start, atual);
 
             // Para cada vizinho do nó atual, calculamos o custo do caminho passando por ele
             if (!adjacency.TryGetValue(atual, out var vizinhos))
@@ -82,10 +108,12 @@ public class AStar : PathFindingAlgorithm<Vertex>
         return [];
     }
 
-    // Manhattan distance como heurística, adequada para grafos em grade
-    // TODO: o certo seria permitir o usuário escolher a heurística, ou criar uma interface IHeuristic para isso. Usar o delegate para isso
-    private static double Heuristica(Vertex atual, Vertex destino)
+    // Usa a heurística injetada se houver; senão, Manhattan via Position (grafos em grade)
+    private double Heuristica(Vertex atual, Vertex destino)
     {
+        if (_heuristica is not null)
+            return _heuristica(atual, destino);
+
         if (atual.Position is null || destino.Position is null)
             return 0;
 
