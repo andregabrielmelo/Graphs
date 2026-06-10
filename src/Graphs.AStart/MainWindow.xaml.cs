@@ -331,6 +331,7 @@ public partial class MainWindow : Window
         DrawGraph();
     }
 
+    // TODO: Deveria deixar mais explicito ao usuario para quanto os pesos mudaram
     private void GenerateTraffic_Click(
     object sender,
     RoutedEventArgs e)
@@ -438,6 +439,7 @@ public partial class MainWindow : Window
         }
     }
 
+    // TODO: Deveria descrever o que levou o algoritimo a tomar a decis'ao diferente e demonstrar as possibilidades no momento de escolhar
     private void UpdateComparison()
     {
         bool routeChanged =
