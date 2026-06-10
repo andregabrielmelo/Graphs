@@ -10,4 +10,12 @@
   <ItemGroup>
     <ProjectReference Include="..\Redakas.Graphs\Redakas.Graphs.csproj" />
   </ItemGroup>
+  <!-- Dados das capitais (projeto Graphs.AStart) — só copia no build, não duplica -->
+  <ItemGroup>
+    <None Include="..\Graphs.AStart\data\*.json"
+          CopyToOutputDirectory="PreserveNewest"
+          LinkBase="data" />
+    <None Include="Assets\brasil.geo.json"
+          CopyToOutputDirectory="PreserveNewest" />
+  </ItemGroup>
 </Project>

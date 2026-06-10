@@ -1,333 +1,401 @@
+using System.IO;
+using System.Text.Json;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Media;
 using System.Windows.Shapes;
 using Redakas.Graphs.Algorithms.Entities;
-using Redakas.Graphs.Builders;
 using Redakas.Graphs.Entities;
-using Redakas.Graphs.Enums;
+using Redakas.Graphs.Helpers;
 
 namespace Graphs.Main;
 
 public partial class MainWindow : Window
 {
-    private Graph _graph = new Graph([], [], GraphDirection.Undirected, GraphFeatures.None);
-    private List<ColoringStep>? _steps = null;
-    private int _currentStep = 0;
-    private readonly Dictionary<Vertex, int> _vertexColors = new();
+    private Graph _grafoNormal = null!;
+    private Dictionary<string, Vertex> _vertices = null!;
+    private Func<Vertex, Vertex, double> _heuristica = null!;
 
-    private static readonly Dictionary<int, Brush> ColorPalette = new()
-    {
-        { 0, Brushes.LightGray },
-        { 1, Brushes.Tomato },
-        { 2, Brushes.CornflowerBlue },
-        { 3, Brushes.MediumSeaGreen },
-        { 4, Brushes.Gold },
-        { 5, Brushes.MediumOrchid },
-        { 6, Brushes.DarkOrange },
-    };
+    private List<Vertex>? _rotaNormal;
+    private double _custoNormal;
+    private List<Vertex>? _rotaCongestionada;
+    private double _custoCongestionado;
+    private List<(Vertex De, Vertex Para)> _trechosCongestionados = [];
+
+    private IReadOnlyList<AStarStep>? _steps;
+    private int _currentStep;
+
+    // Contorno do Brasil (longitude, latitude) carregado do GeoJSON
+    private List<(double Lon, double Lat)> _contornoBrasil = [];
 
     public MainWindow()
     {
         InitializeComponent();
     }
 
-    private void Window_Loaded(object sender, RoutedEventArgs e) => DrawGraph();
+    private void Window_Loaded(object sender, RoutedEventArgs e)
+    {
+        CarregarDados();
+        PreencherCombos();
+        DrawGraph();
+    }
+
+    private void CarregarDados()
+    {
+        // Caminho relativo ao executável (CWD pode ser outro, ex.: dotnet run da raiz)
+        string dataDir = System.IO.Path.Combine(AppContext.BaseDirectory, "data");
+        var estradas = WeightedMatrixLoader.Parse(
+            File.ReadAllText(System.IO.Path.Combine(dataDir, "distancias.json")), CapitaisData.Aliases);
+        var linhaReta = WeightedMatrixLoader.Parse(
+            File.ReadAllText(System.IO.Path.Combine(dataDir, "distancias_em_linha_reta.json")), CapitaisData.Aliases);
+
+        (_grafoNormal, _vertices) = WeightedMatrixLoader.BuildGraph(estradas);
+        _heuristica = WeightedMatrixLoader.BuildHeuristica(linhaReta);
+
+        // Posição geográfica para o desenho do mapa
+        foreach (var (nome, vertex) in _vertices)
+        {
+            if (CapitaisData.Coordenadas.TryGetValue(nome, out var c))
+                vertex.Position = new Position(c.Lon, c.Lat);
+        }
+
+        CarregarContornoBrasil();
+    }
+
+    private void CarregarContornoBrasil()
+    {
+        // GeoJSON: features[0].geometry.coordinates[0] = anel [[lon, lat], ...]
+        string path = System.IO.Path.Combine(AppContext.BaseDirectory, "Assets", "brasil.geo.json");
+        using var doc = JsonDocument.Parse(File.ReadAllText(path));
+        var anel = doc.RootElement
+            .GetProperty("features")[0]
+            .GetProperty("geometry")
+            .GetProperty("coordinates")[0];
+
+        _contornoBrasil = [.. anel.EnumerateArray()
+            .Select(p => (p[0].GetDouble(), p[1].GetDouble()))];
+    }
+
+    private void PreencherCombos()
+    {
+        var nomes = _vertices.Keys.OrderBy(n => n).ToList();
+        origemCombo.ItemsSource = nomes;
+        destinoCombo.ItemsSource = nomes;
+        origemCombo.SelectedItem = "São Paulo";
+        destinoCombo.SelectedItem = "Fortaleza";
+    }
 
     private void GraphCanvas_SizeChanged(object sender, SizeChangedEventArgs e) => DrawGraph();
 
-    private void GraphDirection_Changed(object sender, RoutedEventArgs e)
+    private void MostrarArestas_Changed(object sender, RoutedEventArgs e)
     {
-        // Guard: fires during InitializeComponent before named elements are ready
-        if (directedRadio is null) return;
+        // Guard: dispara durante InitializeComponent antes do grafo carregar
+        if (_vertices is not null)
+            DrawGraph();
+    }
 
-        GraphDirection direction = directedRadio.IsChecked == true
-            ? GraphDirection.Directed
-            : GraphDirection.Undirected;
+    private void Cenario_Changed(object sender, RoutedEventArgs e)
+    {
+        // Guard: dispara durante InitializeComponent antes dos elementos nomeados existirem
+        if (congestionamentoPanel is null) return;
 
-        _graph = new Graph([], [], direction, GraphFeatures.None);
-        ResetColoring();
+        // Cenário 1 = só rota normal; Cenário 2 = normal + congestionamento
+        congestionamentoPanel.Visibility = cenario2Radio.IsChecked == true
+            ? Visibility.Visible
+            : Visibility.Collapsed;
+
+        if (_vertices is not null)
+        {
+            ResetResultados();
+            statusText.Text = "";
+            DrawGraph();
+        }
+    }
+
+    // ── Execução dos cenários ────────────────────────────────────────────────
+
+    private void RodarNormal_Click(object sender, RoutedEventArgs e)
+    {
+        if (!TrySelecionarRota(out var origem, out var destino)) return;
+
+        ResetResultados();
+
+        var astar = new AStar(_heuristica);
+        _rotaNormal = astar.Find(origem, destino, _grafoNormal);
+        _steps = astar.Steps;
+        _currentStep = 0;
+
+        if (_rotaNormal.Count == 0)
+        {
+            statusText.Text = $"Sem rota rodoviária entre {origem.Name} e {destino.Name}." +
+                (origem.Name == "Macapá" || destino.Name == "Macapá"
+                    ? " (Macapá não possui ligação rodoviária com o resto do país.)"
+                    : "");
+            DrawGraph();
+            return;
+        }
+
+        _custoNormal = CongestionHelper.CustoDaRota(_grafoNormal, _rotaNormal);
+        etapasTitulo.Text = "Etapas — Cenário Normal";
+        statusText.Text = $"Rota normal: {RotaTexto(_rotaNormal)} ({_custoNormal:0} km). " +
+                          "Use ▶ para ver as etapas.";
+        congestionarButton.IsEnabled = cenario2Radio.IsChecked == true;
+        nextStepButton.IsEnabled = true;
+        runAllButton.IsEnabled = true;
         DrawGraph();
     }
 
-    // ── Desenho ──────────────────────────────────────────────────────────────
-
-    private void DrawGraph()
+    private void Congestionar_Click(object sender, RoutedEventArgs e)
     {
-        graphCanvas.Children.Clear();
-
-        int vertexCount = _graph.Vertices.Count;
-        if (vertexCount == 0)
-            return;
-
-        double canvasCenterX = graphCanvas.ActualWidth / 2;
-        double canvasCenterY = graphCanvas.ActualHeight / 2;
-        double circleRadius = Math.Min(canvasCenterX, canvasCenterY) * 0.75;
-        const double ellipseSize = 40;
-
-        var vertexPositions = new Dictionary<Vertex, Point>();
-
-        for (int vertexIndex = 0; vertexIndex < vertexCount; vertexIndex++)
+        if (_rotaNormal is null || _rotaNormal.Count == 0) return;
+        if (!double.TryParse(fatorInput.Text, out double fator) || fator <= 1)
         {
-            double angle = 2 * Math.PI * vertexIndex / vertexCount;
-            double vertexX = canvasCenterX + circleRadius * Math.Cos(angle);
-            double vertexY = canvasCenterY + circleRadius * Math.Sin(angle);
-            vertexPositions[_graph.Vertices[vertexIndex]] = new Point(vertexX, vertexY);
-        }
-
-        foreach (var edge in _graph.Edges)
-        {
-            Point edgeStart = vertexPositions[edge.From];
-            Point edgeEnd   = vertexPositions[edge.To];
-
-            graphCanvas.Children.Add(new Line
-            {
-                X1 = edgeStart.X, Y1 = edgeStart.Y,
-                X2 = edgeEnd.X,   Y2 = edgeEnd.Y,
-                Stroke = Brushes.DarkGray,
-                StrokeThickness = 2
-            });
-
-            if (_graph.Direction == GraphDirection.Directed)
-            {
-                double edgeAngle = Math.Atan2(edgeEnd.Y - edgeStart.Y, edgeEnd.X - edgeStart.X);
-                const double arrowLength = 14;
-                const double arrowAngle  = Math.PI / 7; // ~25.7°
-
-                // Place arrowhead tip at the vertex border (not its center)
-                double tipX = edgeEnd.X - (ellipseSize / 2) * Math.Cos(edgeAngle);
-                double tipY = edgeEnd.Y - (ellipseSize / 2) * Math.Sin(edgeAngle);
-
-                double base1X = tipX - arrowLength * Math.Cos(edgeAngle - arrowAngle);
-                double base1Y = tipY - arrowLength * Math.Sin(edgeAngle - arrowAngle);
-                double base2X = tipX - arrowLength * Math.Cos(edgeAngle + arrowAngle);
-                double base2Y = tipY - arrowLength * Math.Sin(edgeAngle + arrowAngle);
-
-                graphCanvas.Children.Add(new Polygon
-                {
-                    Points = new PointCollection
-                    {
-                        new Point(tipX,   tipY),
-                        new Point(base1X, base1Y),
-                        new Point(base2X, base2Y)
-                    },
-                    Fill = Brushes.DarkGray,
-                    Stroke = Brushes.DarkGray,
-                    StrokeThickness = 2
-                });
-            }
-        }
-
-        foreach (var vertex in _graph.Vertices)
-        {
-            Point vertexCenter = vertexPositions[vertex];
-            int color = _vertexColors.TryGetValue(vertex, out int storedColor) ? storedColor : 0;
-            Brush fillBrush = GetColorBrush(color);
-
-            var ellipse = new Ellipse
-            {
-                Width = ellipseSize,
-                Height = ellipseSize,
-                Fill = fillBrush,
-                Stroke = Brushes.Black,
-                StrokeThickness = 2
-            };
-            Canvas.SetLeft(ellipse, vertexCenter.X - ellipseSize / 2);
-            Canvas.SetTop(ellipse, vertexCenter.Y - ellipseSize / 2);
-            graphCanvas.Children.Add(ellipse);
-
-            var label = new TextBlock
-            {
-                Text = vertex.Name,
-                FontWeight = FontWeights.Bold,
-                Width = ellipseSize,
-                TextAlignment = TextAlignment.Center
-            };
-            Canvas.SetLeft(label, vertexCenter.X - ellipseSize / 2);
-            Canvas.SetTop(label, vertexCenter.Y - ellipseSize / 2 + 11);
-            graphCanvas.Children.Add(label);
-        }
-    }
-
-    private static Brush GetColorBrush(int color)
-    {
-        if (ColorPalette.TryGetValue(color, out Brush? brush))
-            return brush;
-
-        double hue = (color * 137.5) % 360;
-        return new SolidColorBrush(HslToRgb(hue, 0.65, 0.55));
-    }
-
-    private static Color HslToRgb(double hue, double saturation, double lightness)
-    {
-        double chroma = (1 - Math.Abs(2 * lightness - 1)) * saturation;
-        double huePrime = hue / 60.0;
-        double secondComponent = chroma * (1 - Math.Abs(huePrime % 2 - 1));
-
-        double r1, g1, b1;
-        if      (huePrime < 1) { r1 = chroma; g1 = secondComponent; b1 = 0; }
-        else if (huePrime < 2) { r1 = secondComponent; g1 = chroma; b1 = 0; }
-        else if (huePrime < 3) { r1 = 0; g1 = chroma; b1 = secondComponent; }
-        else if (huePrime < 4) { r1 = 0; g1 = secondComponent; b1 = chroma; }
-        else if (huePrime < 5) { r1 = secondComponent; g1 = 0; b1 = chroma; }
-        else                   { r1 = chroma; g1 = 0; b1 = secondComponent; }
-
-        double lightnessAdjust = lightness - chroma / 2;
-        return Color.FromRgb(
-            (byte)((r1 + lightnessAdjust) * 255),
-            (byte)((g1 + lightnessAdjust) * 255),
-            (byte)((b1 + lightnessAdjust) * 255)
-        );
-    }
-
-    // ── Gerenciamento do grafo ─────────────────────────────────────────────
-
-    private void AddVertex_Click(object sender, RoutedEventArgs e)
-    {
-        string name = vertexNameInput.Text.Trim();
-        if (string.IsNullOrEmpty(name))
-        {
-            statusText.Text = "Digite o nome do vértice.";
+            statusText.Text = "Fator inválido — use número > 1 (ex.: 4).";
             return;
         }
+        if (!TrySelecionarRota(out var origem, out var destino)) return;
 
-        if (_graph.Vertices.Any(v => v.Name == name))
-        {
-            statusText.Text = $"Vértice '{name}' já existe.";
-            return;
-        }
+        _trechosCongestionados = CongestionHelper.TrechosDaRota(_rotaNormal);
+        var grafoCongestionado = CongestionHelper.ComCongestionamento(
+            _grafoNormal, _trechosCongestionados, fator);
 
-        _graph.AddVertex(new Vertex(name));
-        vertexNameInput.Clear();
-        statusText.Text = string.Empty;
-        ResetColoring();
+        var astar = new AStar(_heuristica);
+        _rotaCongestionada = astar.Find(origem, destino, grafoCongestionado);
+        _custoCongestionado = CongestionHelper.CustoDaRota(grafoCongestionado, _rotaCongestionada);
+        _steps = astar.Steps;
+        _currentStep = 0;
+        etapasList.Items.Clear();
+        etapasTitulo.Text = $"Etapas — Cenário Congestionado (fator ×{fator:0.#})";
+
+        MostrarComparacao();
         DrawGraph();
     }
 
-    private void RemoveVertex_Click(object sender, RoutedEventArgs e)
+    private bool TrySelecionarRota(out Vertex origem, out Vertex destino)
     {
-        string name = vertexNameInput.Text.Trim();
-        var vertex = _graph.Vertices.FirstOrDefault(v => v.Name == name);
-
-        if (vertex is null)
+        origem = destino = null!;
+        if (origemCombo.SelectedItem is not string nomeOrigem ||
+            destinoCombo.SelectedItem is not string nomeDestino)
         {
-            statusText.Text = $"Vértice '{name}' não encontrado.";
-            return;
+            statusText.Text = "Selecione origem e destino.";
+            return false;
         }
-
-        _graph.RemoveVertex(vertex);
-        vertexNameInput.Clear();
-        statusText.Text = string.Empty;
-        ResetColoring();
-        DrawGraph();
+        if (nomeOrigem == nomeDestino)
+        {
+            statusText.Text = "Origem e destino devem ser diferentes.";
+            return false;
+        }
+        origem = _vertices[nomeOrigem];
+        destino = _vertices[nomeDestino];
+        return true;
     }
 
-    private void AddEdge_Click(object sender, RoutedEventArgs e)
+    private void MostrarComparacao()
     {
-        var from = _graph.Vertices.FirstOrDefault(v => v.Name == edgeFromInput.Text.Trim());
-        var to   = _graph.Vertices.FirstOrDefault(v => v.Name == edgeToInput.Text.Trim());
+        if (_rotaNormal is null || _rotaCongestionada is null) return;
 
-        if (from is null || to is null)
+        if (_rotaCongestionada.Count == 0)
         {
-            statusText.Text = "Um ou ambos os vértices não existem.";
+            comparacaoText.Text = "Congestionamento bloqueou todas as rotas (sem caminho).";
             return;
         }
 
-        if (_graph.HasEdge(from, to))
-        {
-            statusText.Text = "Aresta já existe.";
-            return;
-        }
+        // Primeiro ponto onde as rotas divergem
+        int i = 0;
+        while (i < _rotaNormal.Count && i < _rotaCongestionada.Count &&
+               _rotaNormal[i] == _rotaCongestionada[i])
+            i++;
 
-        _graph.AddEdge(new Edge(from, to));
-        edgeFromInput.Clear();
-        edgeToInput.Clear();
-        statusText.Text = string.Empty;
-        ResetColoring();
-        DrawGraph();
+        string divergencia = i >= _rotaNormal.Count && i >= _rotaCongestionada.Count
+            ? "Rotas idênticas — congestionamento não foi suficiente para forçar desvio."
+            : $"Trânsito força desvio a partir de {_rotaNormal[Math.Max(0, i - 1)].Name}.";
+
+        comparacaoText.Text =
+            $"NORMAL ({_custoNormal:0} km): {RotaTexto(_rotaNormal)}\n" +
+            $"CONGESTIONADA ({_custoCongestionado:0} km): {RotaTexto(_rotaCongestionada)}\n" +
+            divergencia;
+        statusText.Text = "";
     }
 
-    private void RemoveEdge_Click(object sender, RoutedEventArgs e)
-    {
-        var from = _graph.Vertices.FirstOrDefault(v => v.Name == edgeFromInput.Text.Trim());
-        var to   = _graph.Vertices.FirstOrDefault(v => v.Name == edgeToInput.Text.Trim());
+    private static string RotaTexto(List<Vertex> rota) =>
+        string.Join(" → ", rota.Select(v => v.Name));
 
-        if (from is null || to is null || !_graph.HasEdge(from, to))
-        {
-            statusText.Text = "Aresta não encontrada.";
-            return;
-        }
-
-        _graph.RemoveEdge(_graph.Edges.First(edge => edge.From == from && edge.To == to));
-        edgeFromInput.Clear();
-        edgeToInput.Clear();
-        statusText.Text = string.Empty;
-        ResetColoring();
-        DrawGraph();
-    }
-
-    // ── Coloração passo a passo ────────────────────────────────────────────
+    // ── Etapas (Abertos/Fechados) ────────────────────────────────────────────
 
     private void NextStep_Click(object sender, RoutedEventArgs e) => ApplyNextStep();
 
     private void RunAll_Click(object sender, RoutedEventArgs e)
     {
-        EnsureStepsCalculated();
-        if (_steps is null) return;
-
-        while (_currentStep < _steps.Count)
+        while (_steps is not null && _currentStep < _steps.Count)
             ApplyNextStep();
-    }
-
-    private void Reset_Click(object sender, RoutedEventArgs e)
-    {
-        ResetColoring();
-        DrawGraph();
     }
 
     private void ApplyNextStep()
     {
-        if (_graph.Vertices.Count == 0)
+        if (_steps is null || _currentStep >= _steps.Count)
         {
-            statusText.Text = "Adicione vértices antes de colorir.";
+            statusText.Text = "Todas as etapas exibidas.";
             return;
         }
 
-        EnsureStepsCalculated();
-        if (_steps is null) return;
+        var step = _steps[_currentStep];
+        etapasList.Items.Add($"Etapa {_currentStep + 1}: {step}");
+        etapasList.ScrollIntoView(etapasList.Items[^1]);
 
-        if (_currentStep >= _steps.Count)
-        {
-            statusText.Text = $"Coloração concluída. Número cromático: {_steps.Max(s => s.Color)}";
-            return;
-        }
-
-        ColoringStep step = _steps[_currentStep];
-        _vertexColors[step.Vertex] = step.Color;
-        coloringSequenceList.Items.Add($"Passo {step.StepNumber}: {step.Vertex.Name} → Cor {step.Color}");
-        coloringSequenceList.ScrollIntoView(coloringSequenceList.Items[^1]);
+        // Estado atual das listas (layout do cenário 1 do colega)
+        listaAbertaBox.Text = string.Join(", ", step.Abertos.Select(v => v.Name));
+        listaFechadaBox.Text = string.Join(", ", step.Fechados.Select(v => v.Name));
 
         _currentStep++;
+    }
+
+    private void Reset_Click(object sender, RoutedEventArgs e)
+    {
+        ResetResultados();
+        statusText.Text = "";
         DrawGraph();
-
-        if (_currentStep >= _steps.Count)
-            statusText.Text = $"Coloração concluída. Número cromático: {_steps.Max(s => s.Color)}";
     }
 
-    private void EnsureStepsCalculated()
+    private void ResetResultados()
     {
-        if (_steps is not null) return;
-
-        var algorithm = new GraphColoringAlgorithm();
-        _steps = algorithm.ColorGraph(_graph);
-    }
-
-    private void ResetColoring()
-    {
+        _rotaNormal = null;
+        _rotaCongestionada = null;
+        _trechosCongestionados = [];
         _steps = null;
         _currentStep = 0;
-        _vertexColors.Clear();
-        coloringSequenceList.Items.Clear();
-        statusText.Text = string.Empty;
+        etapasList.Items.Clear();
+        listaAbertaBox.Text = "";
+        listaFechadaBox.Text = "";
+        comparacaoText.Text = "";
+        etapasTitulo.Text = "Etapas (Abertos / Fechados)";
+        congestionarButton.IsEnabled = false;
+        nextStepButton.IsEnabled = false;
+        runAllButton.IsEnabled = false;
+    }
+
+    // ── Desenho do mapa ──────────────────────────────────────────────────────
+
+    private void DrawGraph()
+    {
+        graphCanvas.Children.Clear();
+        if (_vertices is null || graphCanvas.ActualWidth < 50) return;
+
+        var pontos = ProjetarCapitais();
+
+        // Contorno do Brasil (GeoJSON) como referência visual
+        if (_contornoBrasil.Count > 0)
+        {
+            var contorno = new Polygon
+            {
+                Points = [.. _contornoBrasil.Select(c => Projetar(c.Lon, c.Lat))],
+                Fill = new SolidColorBrush(Color.FromRgb(0xF2, 0xF7, 0xF2)),
+                Stroke = Brushes.Silver,
+                StrokeThickness = 1,
+            };
+            graphCanvas.Children.Add(contorno);
+        }
+
+        // Arestas de fundo opcionais (grafo completo = 351 arestas, vira poluição visual)
+        if (mostrarArestasCheck.IsChecked == true)
+            foreach (var edge in _grafoNormal.Edges)
+                DesenharLinha(pontos, edge.From, edge.To,
+                    Brushes.Gainsboro, 0.5, tracejada: false);
+
+        // Rota normal (azul)
+        if (_rotaNormal is not null)
+            foreach (var (de, para) in CongestionHelper.TrechosDaRota(_rotaNormal))
+                DesenharLinha(pontos, de, para, Brushes.RoyalBlue, 3, tracejada: false);
+
+        // Trechos congestionados (tracejado laranja sobre a rota normal)
+        foreach (var (de, para) in _trechosCongestionados)
+            DesenharLinha(pontos, de, para, Brushes.DarkOrange, 3, tracejada: true);
+
+        // Rota congestionada (vermelho)
+        if (_rotaCongestionada is not null)
+            foreach (var (de, para) in CongestionHelper.TrechosDaRota(_rotaCongestionada))
+                DesenharLinha(pontos, de, para, Brushes.Crimson, 3, tracejada: false);
+
+        // Vértices
+        foreach (var (nome, vertex) in _vertices)
+        {
+            var p = pontos[vertex];
+            const double r = 7;
+            bool naRotaNormal = _rotaNormal?.Contains(vertex) == true;
+            bool naRotaCong = _rotaCongestionada?.Contains(vertex) == true;
+
+            var ellipse = new Ellipse
+            {
+                Width = r * 2,
+                Height = r * 2,
+                Fill = naRotaCong ? Brushes.Crimson
+                     : naRotaNormal ? Brushes.RoyalBlue
+                     : Brushes.LightGray,
+                Stroke = Brushes.Black,
+                StrokeThickness = 1,
+            };
+            Canvas.SetLeft(ellipse, p.X - r);
+            Canvas.SetTop(ellipse, p.Y - r);
+            graphCanvas.Children.Add(ellipse);
+
+            var label = new TextBlock
+            {
+                Text = nome,
+                FontSize = 10,
+                FontWeight = naRotaNormal || naRotaCong ? FontWeights.Bold : FontWeights.Normal,
+            };
+
+            // Litoral leste: rótulo à esquerda do nó (senão estoura a borda / colide)
+            label.Measure(new Size(double.PositiveInfinity, double.PositiveInfinity));
+            double dy = CapitaisData.AjusteVerticalRotulo.GetValueOrDefault(nome);
+            double x = CapitaisData.RotuloEsquerda.Contains(nome)
+                ? p.X - r - 2 - label.DesiredSize.Width
+                : p.X + r + 2;
+            Canvas.SetLeft(label, x);
+            Canvas.SetTop(label, p.Y - r + dy);
+            graphCanvas.Children.Add(label);
+        }
+    }
+
+    // Projeta (longitude, latitude) para coordenadas do canvas com escala uniforme
+    // (mesmo fator nos dois eixos — preserva o formato do país) e centralizado.
+    // Bounding box aproximado do Brasil: lon [-74, -34], lat [-34, 6]
+    private Point Projetar(double lon, double lat)
+    {
+        const double lonMin = -74, lonMax = -34, latMin = -34, latMax = 6;
+        const double margem = 30;
+        double w = graphCanvas.ActualWidth - 2 * margem;
+        double h = graphCanvas.ActualHeight - 2 * margem;
+
+        double escala = Math.Min(w / (lonMax - lonMin), h / (latMax - latMin));
+        double offsetX = margem + (w - (lonMax - lonMin) * escala) / 2;
+        double offsetY = margem + (h - (latMax - latMin) * escala) / 2;
+
+        double x = offsetX + (lon - lonMin) * escala;
+        double y = offsetY + (latMax - lat) * escala;
+        return new Point(x, y);
+    }
+
+    private Dictionary<Vertex, Point> ProjetarCapitais()
+    {
+        var pontos = new Dictionary<Vertex, Point>();
+        foreach (var vertex in _vertices.Values)
+            pontos[vertex] = Projetar(vertex.Position?.X ?? -74, vertex.Position?.Y ?? -34);
+        return pontos;
+    }
+
+    private void DesenharLinha(
+        Dictionary<Vertex, Point> pontos, Vertex de, Vertex para,
+        Brush cor, double espessura, bool tracejada)
+    {
+        var linha = new Line
+        {
+            X1 = pontos[de].X, Y1 = pontos[de].Y,
+            X2 = pontos[para].X, Y2 = pontos[para].Y,
+            Stroke = cor,
+            StrokeThickness = espessura,
+        };
+        if (tracejada)
+            linha.StrokeDashArray = [4, 3];
+        graphCanvas.Children.Add(linha);
     }
 }
