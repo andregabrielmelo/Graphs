@@ -8,6 +8,7 @@
     <File Path="README.md" />
   </Folder>
   <Folder Name="/src/">
+    <Project Path="src/Graphs.AStart/Graphs.AStart.csproj" Id="19e06298-5760-4c72-be9f-e748bbab279d" />
     <Project Path="src/Graphs.Main/Graphs.Main.csproj" Id="b7c3d2e1-f4a5-4b6c-9d8e-0f1a2b3c4d5e" />
     <Project Path="src/Redakas.Graphs/Redakas.Graphs.csproj" Id="38d84916-792f-4a9f-a314-0a866be13eb0">
       <BuildType Project="Release" />
