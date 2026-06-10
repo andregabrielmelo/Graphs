@@ -1,15 +1,47 @@
+using Redakas.Graphs.Algorithms.Entities;
+using Redakas.Graphs.Entities;
+using Redakas.Graphs.Enums;
+using System.IO;
+using System.Text.Json;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Media;
 using System.Windows.Shapes;
-using Redakas.Graphs.Algorithms.Entities;
-using Redakas.Graphs.Entities;
-using Redakas.Graphs.Enums;
 
 namespace Graphs.AStart;
 
 public partial class MainWindow : Window
 {
+    private static readonly string[] _capitais =
+    [
+        "Aracajú",
+        "Belém",
+        "Belo Horizonte",
+        "Boa Vista",
+        "Brasília",
+        "Campo Grande",
+        "Cuiabá",
+        "Curitiba",
+        "Florianópolis",
+        "Fortaleza",
+        "Goiânia",
+        "João Pessoa",
+        "Maceió",
+        "Manaus",
+        "Natal",
+        "Palmas",
+        "Porto Alegre",
+        "Porto Velho",
+        "Recife",
+        "Rio Branco",
+        "Rio de Janeiro",
+        "Salvador",
+        "São Luis",
+        "São Paulo",
+        "Teresina",
+        "Vitória"
+    ];
+
     private Graph _graph = new([], [], GraphDirection.Undirected, GraphFeatures.Weighted);
 
     private List<Vertex> _normalPath = [];
@@ -21,6 +53,9 @@ public partial class MainWindow : Window
     private readonly Dictionary<Vertex, Point> _vertexPositions = new();
 
     private readonly Dictionary<Edge, double> _originalWeights = new();
+
+    private Dictionary<string, Vertex> _verticesByName = new();
+    private Dictionary<string, Dictionary<string, double>> _heuristicDistances = new();
 
     private Vertex? _origin;
     private Vertex? _destination;
@@ -41,21 +76,107 @@ public partial class MainWindow : Window
 
     private void LoadGraph()
     {
+        string jsonDistancias =
+            File.ReadAllText("data/distancias.json");
+
+        var distancias =
+            JsonSerializer.Deserialize<
+                Dictionary<string, Dictionary<string, double>>
+            >(jsonDistancias)!;
+
+        string jsonDistanciasEmLinhaReta =
+            File.ReadAllText("data/distancias_em_linha_reta.json");
+
+        var distanciasEmLinhaReta =
+            JsonSerializer.Deserialize<
+                Dictionary<string, Dictionary<string, double>>
+            >(jsonDistanciasEmLinhaReta)!;
+
+        _heuristicDistances = distanciasEmLinhaReta;
+
+        // =====================================================
+        // Cria os vértices
+        // =====================================================
+
+        _verticesByName.Clear();
+
+        foreach (string capital in _capitais)
+        {
+            var vertex = new Vertex(capital);
+
+            _verticesByName[capital] = vertex;
+        }
+
+        // =====================================================
+        // Cria as arestas
+        // =====================================================
+
+        List<Edge> edges = [];
+
+        foreach (var origem in distancias)
+        {
+            string cidadeOrigem = origem.Key;
+
+            foreach (var destino in origem.Value)
+            {
+                string cidadeDestino = destino.Key;
+                double distancia = destino.Value;
+
+                if (cidadeOrigem == cidadeDestino)
+                    continue;
+
+                Vertex from = _verticesByName[cidadeOrigem];
+                Vertex to = _verticesByName[cidadeDestino];
+
+                edges.Add(
+                    new Edge(
+                        from,
+                        to,
+                        distancia
+                    )
+                );
+            }
+        }
+
+        // =====================================================
+        // Cria o grafo
+        // =====================================================
+
         _graph = new Graph(
-            [],
-            [],
+            _verticesByName.Values,
+            edges,
             GraphDirection.Undirected,
             GraphFeatures.Weighted
         );
 
-        // TODO:
-        // Ler distancias.json
-        // Criar vertices
-        // Criar arestas
-        // Salvar pesos originais
+        // =====================================================
+        // Guarda pesos originais
+        // =====================================================
 
-        statusText.Text = "Grafo carregado.";
+        _originalWeights.Clear();
+
+        foreach (var edge in _graph.Edges)
+        {
+            if (!_originalWeights.ContainsKey(edge))
+                _originalWeights[edge] = edge.Weight;
+        }
+
+        // =====================================================
+        // Popular comboboxes
+        // =====================================================
+
+        originComboBox.ItemsSource = _capitais;
+        destinationComboBox.ItemsSource = _capitais;
+
+        originComboBox.SelectedIndex = 0;
+        destinationComboBox.SelectedIndex = 1;
+
+        statusText.Text =
+            $"Grafo carregado com {_graph.Vertices.Count} capitais e {_graph.Edges.Count} arestas.";
+
+        DrawGraph();
     }
+
 
     private void PopulateCapitalCombos()
     {
