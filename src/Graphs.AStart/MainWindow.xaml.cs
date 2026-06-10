@@ -2,6 +2,7 @@ using Redakas.Graphs.Algorithms.Entities;
 using Redakas.Graphs.Entities;
 using Redakas.Graphs.Enums;
 using System.IO;
+using System.Security.Cryptography;
 using System.Text.Json;
 using System.Windows;
 using System.Windows.Controls;
@@ -55,9 +56,15 @@ public partial class MainWindow : Window
 
     private Dictionary<string, Vertex> _verticesByName = new();
     private Dictionary<string, Dictionary<string, double>> _heuristicDistances = new();
+    private readonly HashSet<Edge> _trafficEdges = [];
 
     private Vertex? _origin;
     private Vertex? _destination;
+
+    private List<AStarStep> _steps = [];
+
+    private double _normalCost;
+    private double _trafficCost;
 
     public MainWindow()
     {
@@ -136,6 +143,13 @@ public partial class MainWindow : Window
             GraphDirection.Undirected,
             GraphFeatures.Weighted
         );
+        
+        _graphWithDefaultWeights = new Graph(
+            _verticesByName.Values,
+            edges,
+            GraphDirection.Undirected,
+            GraphFeatures.Weighted
+        );
 
         // Guarda pesos originais
         _originalWeights.Clear();
@@ -171,17 +185,61 @@ public partial class MainWindow : Window
         }
     }
 
-    private void NextStep_Click(object sender, RoutedEventArgs e)
+    private void NextStep_Click(
+    object sender,
+    RoutedEventArgs e)
     {
+        if (_steps.Count == 0)
+        {
+            StartSearch();
+        }
+
+        if (_currentStep >= _steps.Count)
+        {
+            statusText.Text =
+                "Todos os passos já foram exibidos.";
+
+            return;
+        }
+
+        AStarStep step =
+            _steps[_currentStep];
+
+        UpdateOpenList(
+            step.Abertos.Select(v =>
+                $"{v.Name}")
+        );
+
+        UpdateClosedList(
+            step.Fechados.Select(v =>
+                $"{v.Name}")
+        );
+
         statusText.Text =
-            $"Executando passo {_currentStep + 1} do A*";
+            $"Passo {_currentStep + 1}/{_steps.Count} - Fechou {step.Fechado.Name} (F={step.F:0})";
 
         _currentStep++;
     }
 
-    private void RunAll_Click(object sender, RoutedEventArgs e)
+    private void RunAll_Click(
+    object sender,
+    RoutedEventArgs e)
     {
         StartSearch();
+
+        if (_steps.Count > 0)
+        {
+            AStarStep last =
+                _steps[^1];
+
+            UpdateOpenList(
+                last.Abertos.Select(v => v.Name)
+            );
+
+            UpdateClosedList(
+                last.Fechados.Select(v => v.Name)
+            );
+        }
 
         statusText.Text =
             "Busca A* concluída.";
@@ -215,25 +273,62 @@ public partial class MainWindow : Window
         closedList.Items.Clear();
 
         // Passe a heuristica a ser utilizada quando se inicializa o algoritimo A*
-        PathFindingAlgorithm<Vertex> _AStarAlgorithm = new AStar(
+        AStar algorithm = new AStar(
             (start, end) => _heuristicDistances[start.Name][end.Name]
         );
 
-        List<Vertex> route = _AStarAlgorithm.Find(_origin, _destination, _graph);
-        List<Vertex> routeWithDefaultWeight = _AStarAlgorithm.Find(_origin, _destination, _graphWithDefaultWeights);
+        _normalPath =
+    algorithm.Find(
+        _origin,
+        _destination,
+        _graphWithDefaultWeights
+    );
 
-        ShowPath(route, false);
-        ShowPath(routeWithDefaultWeight, true);
+        _steps = algorithm.Steps.ToList();
+
+        _trafficPath =
+            algorithm.Find(
+                _origin,
+                _destination,
+                _graph
+            );
+
+        _normalCost =
+    CalculatePathCost(
+        _normalPath,
+        _graphWithDefaultWeights
+    );
+
+        _trafficCost =
+            CalculatePathCost(
+                _trafficPath,
+                _graph
+            );
+
+        ShowPath(_normalPath, false);
+        ShowPath(_trafficPath, true);
+
+        UpdateComparison();
+        DrawGraph();
     }
 
-    private void Reset_Click(object sender, RoutedEventArgs e)
+    private void Reset_Click(
+    object sender,
+    RoutedEventArgs e)
     {
         _currentStep = 0;
+
+        _steps.Clear();
+
+        _normalPath.Clear();
+        _trafficPath.Clear();
 
         openList.Items.Clear();
         closedList.Items.Clear();
 
         statusText.Text = "";
+
+        DrawGraph();
     }
 
     private void GenerateTraffic_Click(
@@ -242,20 +337,25 @@ public partial class MainWindow : Window
     {
         Random random = new();
 
+        _trafficEdges.Clear();
+
         for (int i = 0; i < _graph.Edges.Count; i++)
         {
             if (random.NextDouble() < 0.25)
             {
                 Edge edge = _graph.Edges[i];
 
-                double factor =
-                    random.Next(2, 6);
+                double factor = random.Next(2, 6);
 
-                _graph.Edges[i] =
+                Edge newEdge =
                     edge with
                     {
                         Weight = edge.Weight * factor
                     };
+
+                _graph.Edges[i] = newEdge;
+
+                _trafficEdges.Add(newEdge);
             }
         }
 
@@ -263,6 +363,8 @@ public partial class MainWindow : Window
 
         statusText.Text =
             "Congestionamento gerado.";
+
+        DrawGraph();
     }
 
     private void RestoreWeights_Click(
@@ -290,6 +392,10 @@ public partial class MainWindow : Window
 
         statusText.Text =
             "Pesos restaurados.";
+
+        _trafficEdges.Clear();
+
+        DrawGraph();
     }
 
     private void UpdateOpenList(
@@ -321,20 +427,49 @@ public partial class MainWindow : Window
             );
 
         if (traffic)
-            trafficRouteText.Text = route;
+        {
+            trafficRouteText.Text =
+                $"{route}\n\nCusto total: {_trafficCost:N0} km";
+        }
         else
-            normalRouteText.Text = route;
+        {
+            normalRouteText.Text =
+                $"{route}\n\nCusto total: {_normalCost:N0} km";
+        }
     }
 
     private void UpdateComparison()
     {
+        bool routeChanged =
+            !_normalPath.SequenceEqual(_trafficPath);
+
+        double difference =
+            _trafficCost - _normalCost;
+
         comparisonText.Text =
     $"""
-Rota normal:
-{normalRouteText.Text}
+Rota Normal:
+{string.Join(" -> ", _normalPath.Select(v => v.Name))}
 
-Rota congestionada:
-{trafficRouteText.Text}
+Custo:
+{_normalCost:N0} km
+
+Rota Congestionada:
+{string.Join(" -> ", _trafficPath.Select(v => v.Name))}
+
+Custo:
+{_trafficCost:N0} km
+
+Diferença:
+{difference:N0} km
+
+Resultado:
+{(routeChanged
+        ? "O congestionamento forçou o A* a escolher uma rota diferente."
+        : "O A* manteve a mesma rota.")}
+
+Aumento de custo:
+{((difference / _normalCost) * 100):N1}%
 """;
     }
 
@@ -366,96 +501,218 @@ Rota congestionada:
         graphCanvas.Children.Clear();
 
         int vertexCount = _graph.Vertices.Count;
+
         if (vertexCount == 0)
             return;
 
         double canvasCenterX = graphCanvas.ActualWidth / 2;
         double canvasCenterY = graphCanvas.ActualHeight / 2;
-        double circleRadius = Math.Min(canvasCenterX, canvasCenterY) * 0.75;
+
+        double circleRadius =
+            Math.Min(canvasCenterX, canvasCenterY) * 0.75;
+
         const double ellipseSize = 40;
 
-        var vertexPositions = new Dictionary<Vertex, Point>();
+        Dictionary<Vertex, Point> vertexPositions = [];
 
-        for (int vertexIndex = 0; vertexIndex < vertexCount; vertexIndex++)
+        // Posicionamento dos vértices
+        for (int i = 0; i < vertexCount; i++)
         {
-            double angle = 2 * Math.PI * vertexIndex / vertexCount;
-            double vertexX = canvasCenterX + circleRadius * Math.Cos(angle);
-            double vertexY = canvasCenterY + circleRadius * Math.Sin(angle);
-            vertexPositions[_graph.Vertices[vertexIndex]] = new Point(vertexX, vertexY);
+            double angle =
+                2 * Math.PI * i / vertexCount;
+
+            double x =
+                canvasCenterX +
+                circleRadius * Math.Cos(angle);
+
+            double y =
+                canvasCenterY +
+                circleRadius * Math.Sin(angle);
+
+            vertexPositions[_graph.Vertices[i]] =
+                new Point(x, y);
         }
 
-        foreach (var edge in _graph.Edges)
+        // Caminho que será destacado
+        HashSet<(Vertex, Vertex)> pathEdges = [];
+
+        List<Vertex> pathToDraw =
+            _trafficMode
+                ? _trafficPath
+                : _normalPath;
+
+        for (int i = 0; i < pathToDraw.Count - 1; i++)
         {
-            Point edgeStart = vertexPositions[edge.From];
-            Point edgeEnd = vertexPositions[edge.To];
+            pathEdges.Add(
+                (pathToDraw[i], pathToDraw[i + 1]));
+
+            pathEdges.Add(
+                (pathToDraw[i + 1], pathToDraw[i]));
+        }
+
+        // Desenha arestas
+        foreach (Edge edge in _graph.Edges)
+        {
+            Point start =
+                vertexPositions[edge.From];
+
+            Point end =
+                vertexPositions[edge.To];
+
+            bool isPath =
+                pathEdges.Contains(
+                    (edge.From, edge.To));
+
+            bool isTraffic =
+                _trafficEdges.Contains(edge);
+
+            Brush color =
+                isPath
+                    ? Brushes.LimeGreen
+                    : isTraffic
+                        ? Brushes.Red
+                        : Brushes.DarkGray;
+
+            double thickness =
+                isPath
+                    ? 5
+                    : isTraffic
+                        ? 4
+                        : 1.5;
 
             graphCanvas.Children.Add(new Line
             {
-                X1 = edgeStart.X,
-                Y1 = edgeStart.Y,
-                X2 = edgeEnd.X,
-                Y2 = edgeEnd.Y,
-                Stroke = Brushes.DarkGray,
-                StrokeThickness = 2
+                X1 = start.X,
+                Y1 = start.Y,
+                X2 = end.X,
+                Y2 = end.Y,
+                Stroke = color,
+                StrokeThickness = thickness
             });
 
-            if (_graph.Direction == GraphDirection.Directed)
+            // Peso da aresta
+            double middleX =
+                (start.X + end.X) / 2;
+
+            double middleY =
+                (start.Y + end.Y) / 2;
+
+            graphCanvas.Children.Add(new TextBlock
             {
-                double edgeAngle = Math.Atan2(edgeEnd.Y - edgeStart.Y, edgeEnd.X - edgeStart.X);
-                const double arrowLength = 14;
-                const double arrowAngle = Math.PI / 7; // ~25.7°
+                Text = ((int)edge.Weight).ToString(),
+                FontSize = 10,
+                Background = Brushes.White
+            });
 
-                // Place arrowhead tip at the vertex border (not its center)
-                double tipX = edgeEnd.X - (ellipseSize / 2) * Math.Cos(edgeAngle);
-                double tipY = edgeEnd.Y - (ellipseSize / 2) * Math.Sin(edgeAngle);
+            Canvas.SetLeft(
+                graphCanvas.Children[^1],
+                middleX);
 
-                double base1X = tipX - arrowLength * Math.Cos(edgeAngle - arrowAngle);
-                double base1Y = tipY - arrowLength * Math.Sin(edgeAngle - arrowAngle);
-                double base2X = tipX - arrowLength * Math.Cos(edgeAngle + arrowAngle);
-                double base2Y = tipY - arrowLength * Math.Sin(edgeAngle + arrowAngle);
-
-                graphCanvas.Children.Add(new Polygon
-                {
-                    Points = new PointCollection
-                    {
-                        new Point(tipX,   tipY),
-                        new Point(base1X, base1Y),
-                        new Point(base2X, base2Y)
-                    },
-                    Fill = Brushes.DarkGray,
-                    Stroke = Brushes.DarkGray,
-                    StrokeThickness = 2
-                });
-            }
+            Canvas.SetTop(
+                graphCanvas.Children[^1],
+                middleY);
         }
 
-        foreach (var vertex in _graph.Vertices)
+        // Desenha vértices
+        foreach (Vertex vertex in _graph.Vertices)
         {
-            Point vertexCenter = vertexPositions[vertex];
-            Brush fillBrush = Brushes.LightBlue;
+            Point center =
+                vertexPositions[vertex];
 
-            var ellipse = new Ellipse
+            Brush fill =
+                Brushes.LightBlue;
+
+            if (_origin == vertex)
+                fill = Brushes.LightGreen;
+
+            if (_destination == vertex)
+                fill = Brushes.Orange;
+
+            if (pathToDraw.Contains(vertex))
+                fill = Brushes.Gold;
+
+            Ellipse ellipse = new()
             {
                 Width = ellipseSize,
                 Height = ellipseSize,
-                Fill = fillBrush,
+                Fill = fill,
                 Stroke = Brushes.Black,
                 StrokeThickness = 2
             };
-            Canvas.SetLeft(ellipse, vertexCenter.X - ellipseSize / 2);
-            Canvas.SetTop(ellipse, vertexCenter.Y - ellipseSize / 2);
+
+            Canvas.SetLeft(
+                ellipse,
+                center.X - ellipseSize / 2);
+
+            Canvas.SetTop(
+                ellipse,
+                center.Y - ellipseSize / 2);
+
             graphCanvas.Children.Add(ellipse);
 
-            var label = new TextBlock
+            TextBlock label = new()
             {
                 Text = vertex.Name,
                 FontWeight = FontWeights.Bold,
-                Width = ellipseSize,
-                TextAlignment = TextAlignment.Center
+                Width = 90,
+                TextAlignment = TextAlignment.Center,
+                FontSize = 10
             };
-            Canvas.SetLeft(label, vertexCenter.X - ellipseSize / 2);
-            Canvas.SetTop(label, vertexCenter.Y - ellipseSize / 2 + 11);
+
+            Canvas.SetLeft(
+                label,
+                center.X - 45);
+
+            Canvas.SetTop(
+                label,
+                center.Y + 20);
+
             graphCanvas.Children.Add(label);
         }
+
+        double displayedCost =
+    _trafficMode
+        ? _trafficCost
+        : _normalCost;
+
+        TextBlock costLabel = new()
+        {
+            Text =
+        $"Custo Total: {displayedCost:N0} km",
+            FontSize = 18,
+            FontWeight = FontWeights.Bold,
+            Background = Brushes.White
+        };
+
+        Canvas.SetLeft(costLabel, 10);
+        Canvas.SetTop(costLabel, 10);
+
+        graphCanvas.Children.Add(costLabel);
+    }
+
+    private static double CalculatePathCost(
+    IReadOnlyList<Vertex> path,
+    Graph graph)
+    {
+        if (path.Count < 2)
+            return 0;
+
+        double totalCost = 0;
+
+        for (int i = 0; i < path.Count - 1; i++)
+        {
+            Vertex from = path[i];
+            Vertex to = path[i + 1];
+
+            Edge? edge =
+                graph.Edges.FirstOrDefault(e =>
+                    (e.From == from && e.To == to) ||
+                    (e.From == to && e.To == from));
+
+            if (edge is not null)
+                totalCost += edge.Weight;
+        }
+
+        return totalCost;
     }
 }
