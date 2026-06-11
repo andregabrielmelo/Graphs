@@ -1,5 +1,4 @@
 using System.IO;
-using System.Security.Cryptography;
 using System.Text.Json;
 using System.Windows;
 using System.Windows.Controls;
@@ -245,7 +244,7 @@ public partial class MainWindow : Window
 
         _normalPath = algorithm.Find(_origin, _destination, _graphWithDefaultWeights);
 
-        _steps = algorithm.Steps.ToList();
+        _steps = [.. algorithm.Steps];
 
         _trafficPath = algorithm.Find(_origin, _destination, _graph);
 
@@ -278,6 +277,7 @@ public partial class MainWindow : Window
     }
 
     // TODO: Deveria deixar mais explicito ao usuario para quanto os pesos mudaram
+    // Alem, deveria congestionar as arestas mais utilizadas para uma maior probabilidade de alterar a rota
     private void GenerateTraffic_Click(object sender, RoutedEventArgs e)
     {
         Random random = new();
@@ -360,7 +360,6 @@ public partial class MainWindow : Window
         }
     }
 
-    // TODO: Deveria descrever o que levou o algoritimo a tomar a decis'ao diferente e demonstrar as possibilidades no momento de escolhar
     private void UpdateComparison()
     {
         bool routeChanged = !_normalPath.SequenceEqual(_trafficPath);
@@ -391,61 +390,6 @@ Resultado:
 Aumento de custo:
 {((difference / _normalCost) * 100):N1}%
 """;
-    }
-
-    // ── Desenho ──────────────────────────────────────────────────────────────
-    private static Color HslToRgb(double hue, double saturation, double lightness)
-    {
-        double chroma = (1 - Math.Abs(2 * lightness - 1)) * saturation;
-        double huePrime = hue / 60.0;
-        double secondComponent = chroma * (1 - Math.Abs(huePrime % 2 - 1));
-
-        double r1,
-            g1,
-            b1;
-        if (huePrime < 1)
-        {
-            r1 = chroma;
-            g1 = secondComponent;
-            b1 = 0;
-        }
-        else if (huePrime < 2)
-        {
-            r1 = secondComponent;
-            g1 = chroma;
-            b1 = 0;
-        }
-        else if (huePrime < 3)
-        {
-            r1 = 0;
-            g1 = chroma;
-            b1 = secondComponent;
-        }
-        else if (huePrime < 4)
-        {
-            r1 = 0;
-            g1 = secondComponent;
-            b1 = chroma;
-        }
-        else if (huePrime < 5)
-        {
-            r1 = secondComponent;
-            g1 = 0;
-            b1 = chroma;
-        }
-        else
-        {
-            r1 = chroma;
-            g1 = 0;
-            b1 = secondComponent;
-        }
-
-        double lightnessAdjust = lightness - chroma / 2;
-        return Color.FromRgb(
-            (byte)((r1 + lightnessAdjust) * 255),
-            (byte)((g1 + lightnessAdjust) * 255),
-            (byte)((b1 + lightnessAdjust) * 255)
-        );
     }
 
     private void DrawGraph()
