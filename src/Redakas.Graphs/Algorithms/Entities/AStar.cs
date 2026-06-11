@@ -65,7 +65,24 @@ public class AStar : PathFindingAlgorithm<Vertex>
             // Registra a etapa (nó fechado + snapshot das listas) para acompanhamento
             double g = gScore.GetValueOrDefault(atual, double.MaxValue);
             double h = Heuristica(atual, end);
-            _steps.Add(new AStarStep(atual, g, h, g + h, [.. listaAberta], [.. listaFechada]));
+            _steps.Add(
+                new AStarStep(
+                    atual,
+                    g,
+                    h,
+                    g + h,
+                    [
+                        .. listaAberta.Select(v =>
+                            new AStarNodeInfo(
+                                v,
+                                gScore.GetValueOrDefault(v, double.MaxValue),
+                                Heuristica(v, end),
+                                fScore.GetValueOrDefault(v, double.MaxValue)
+                            ))
+                    ],
+                    [.. listaFechada]
+                )
+            );
 
             // Se chegamos ao destino, reconstruímos o caminho a partir dos pais
             if (atual == end)

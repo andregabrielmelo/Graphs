@@ -193,12 +193,20 @@ public partial class MainWindow : Window
 
         AStarStep step = _steps[_currentStep];
 
-        UpdateOpenList(step.Abertos.Select(v => $"{v.Name}"));
+        UpdateOpenList(
+            step.Abertos
+                .OrderBy(v => v.F)
+                .Select(v =>
+                    $"{v.Vertex.Name,-15} {v.G,6:0} {v.H,6:0} {v.F,6:0}"
+                )
+        );
 
         UpdateClosedList(step.Fechados.Select(v => $"{v.Name}"));
 
         statusText.Text =
-            $"Passo {_currentStep + 1}/{_steps.Count} - Fechou {step.Fechado.Name} (F={step.F:0})";
+            $"Passo {_currentStep + 1}/{_steps.Count}\n" +
+            $"Fechado: {step.Fechado.Name}\n" +
+            $"G={step.G:0}  H={step.H:0}  F={step.F:0}";
 
         _currentStep++;
     }
@@ -211,7 +219,13 @@ public partial class MainWindow : Window
         {
             AStarStep last = _steps[^1];
 
-            UpdateOpenList(last.Abertos.Select(v => v.Name));
+            UpdateOpenList(
+                last.Abertos
+                    .OrderBy(v => v.F)
+                    .Select(v =>
+                        $"{v.Vertex.Name,-15} {v.G,6:0} {v.H,6:0} {v.F,6:0}"
+                    )
+            );
 
             UpdateClosedList(last.Fechados.Select(v => v.Name));
         }

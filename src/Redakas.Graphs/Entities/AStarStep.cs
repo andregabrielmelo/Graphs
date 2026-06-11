@@ -10,12 +10,19 @@ public record AStarStep(
     double G,
     double H,
     double F,
-    List<Vertex> Abertos,
+    List<AStarNodeInfo> Abertos,
     List<Vertex> Fechados
 )
 {
     public override string ToString() =>
         $"Fecha {Fechado.Name} (G={G:0.#} H={H:0.#} F={F:0.#}) | " +
-        $"Abertos: [{string.Join(", ", Abertos.Select(v => v.Name))}] | " +
+        $"Abertos: [{string.Join(", ", Abertos.Select(v => v.Vertex.Name))}] | " +
         $"Fechados: [{string.Join(", ", Fechados.Select(v => v.Name))}]";
 }
+
+public record AStarNodeInfo(
+    Vertex Vertex,
+    double G,
+    double H,
+    double F
+);
