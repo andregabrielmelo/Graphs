@@ -119,22 +119,21 @@
         <RowDefinition Height="180" />
       </Grid.RowDefinitions>
 
-    <GroupBox Header="Lista Aberta">
+      <GroupBox Header="Lista Aberta">
         <DockPanel>
-            <TextBlock
-    DockPanel.Dock="Top"
-    FontFamily="Consolas"
-    FontWeight="Bold"
-    Margin="5"
-    Text="Cidade             G      H      F" />
+          <TextBlock
+            DockPanel.Dock="Top"
+            FontFamily="Consolas"
+            FontWeight="Bold"
+            Margin="5"
+            Text="Cidade             G      H      F"
+          />
 
-            <ListBox
-    x:Name="openList"
-    FontFamily="Consolas" />
+          <ListBox x:Name="openList" FontFamily="Consolas" />
         </DockPanel>
-    </GroupBox>
+      </GroupBox>
 
-            <GroupBox Header="Lista Fechada" Grid.Row="1" Margin="0,5,0,5">
+      <GroupBox Header="Lista Fechada" Grid.Row="1" Margin="0,5,0,5">
         <ListBox x:Name="closedList" FontFamily="Consolas" />
       </GroupBox>
 
