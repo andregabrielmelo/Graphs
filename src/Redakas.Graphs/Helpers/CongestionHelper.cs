@@ -26,8 +26,12 @@ public static class CongestionHelper
     public static List<(Vertex De, Vertex Para)> TrechosDaRota(List<Vertex> rota) =>
         [.. rota.Zip(rota.Skip(1))];
 
+    /// <summary>Peso da aresta entre dois vértices, ignorando direção.</summary>
+    public static double PesoDoTrecho(Graph grafo, Vertex de, Vertex para) =>
+        grafo.Edges.Single(e =>
+            (e.From == de && e.To == para) || (e.From == para && e.To == de)).Weight;
+
     /// <summary>Custo total da rota somando pesos das arestas percorridas.</summary>
     public static double CustoDaRota(Graph grafo, List<Vertex> rota) =>
-        TrechosDaRota(rota).Sum(t => grafo.Edges.Single(e =>
-            (e.From == t.De && e.To == t.Para) || (e.From == t.Para && e.To == t.De)).Weight);
+        TrechosDaRota(rota).Sum(t => PesoDoTrecho(grafo, t.De, t.Para));
 }
