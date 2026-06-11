@@ -6,7 +6,7 @@ namespace Redakas.Graphs.Algorithms.Entities;
 public class AStar : PathFindingAlgorithm<Vertex>
 {
     // Heurística injetada: estimativa H(atual, destino). Null = Manhattan via Position.
-    private readonly Func<Vertex, Vertex, double>? _heuristica;
+    private readonly Func<Vertex, Vertex, double> _heuristica;
     private readonly List<AStarStep> _steps = [];
 
     /// <summary>
@@ -15,13 +15,13 @@ public class AStar : PathFindingAlgorithm<Vertex>
     /// </summary>
     public IReadOnlyList<AStarStep> Steps => _steps;
 
-    public AStar() { }
+    private AStar() { }
 
     /// <param name="heuristica">
     /// Estimativa H(atual, destino), ex.: distância em linha reta.
     /// Null = Manhattan via Position (comportamento original).
     /// </param>
-    public AStar(Func<Vertex, Vertex, double>? heuristica) => _heuristica = heuristica;
+    public AStar(Func<Vertex, Vertex, double> heuristica) => _heuristica = heuristica;
 
     public override string Name => "A*";
 
@@ -48,7 +48,7 @@ public class AStar : PathFindingAlgorithm<Vertex>
 
         // Calcula as informações iniciais para o nó de início
         gScore[start] = 0;
-        fScore[start] = Heuristica(start, end);
+        fScore[start] = _heuristica.Invoke(start, end);
         pais[start] = null;
 
         // Enquanto houver nós para analisar
@@ -64,7 +64,7 @@ public class AStar : PathFindingAlgorithm<Vertex>
 
             // Registra a etapa (nó fechado + snapshot das listas) para acompanhamento
             double g = gScore.GetValueOrDefault(atual, double.MaxValue);
-            double h = Heuristica(atual, end);
+            double h = _heuristica.Invoke(atual, end);
             _steps.Add(
                 new AStarStep(
                     atual,
@@ -76,7 +76,7 @@ public class AStar : PathFindingAlgorithm<Vertex>
                             new AStarNodeInfo(
                                 v,
                                 gScore.GetValueOrDefault(v, double.MaxValue),
-                                Heuristica(v, end),
+                                _heuristica.Invoke(v, end),
                                 fScore.GetValueOrDefault(v, double.MaxValue)
                             ))
                     ],
@@ -114,7 +114,7 @@ public class AStar : PathFindingAlgorithm<Vertex>
                 // Se o caminho passando pelo vizinho é melhor, atualizamos as informações para esse vizinho
                 pais[vizinho] = atual;
                 gScore[vizinho] = tentativeG;
-                fScore[vizinho] = tentativeG + Heuristica(vizinho, end);
+                fScore[vizinho] = tentativeG + _heuristica.Invoke(vizinho, end);
 
                 // Se o vizinho não está na lista aberta, adicionamos ele para ser analisado posteriormente
                 if (!listaAberta.Contains(vizinho))
@@ -125,16 +125,4 @@ public class AStar : PathFindingAlgorithm<Vertex>
         return [];
     }
 
-    // Usa a heurística injetada se houver; senão, Manhattan via Position (grafos em grade)
-    private double Heuristica(Vertex atual, Vertex destino)
-    {
-        if (_heuristica is not null)
-            return _heuristica(atual, destino);
-
-        if (atual.Position is null || destino.Position is null)
-            return 0;
-
-        return Math.Abs(atual.Position.X - destino.Position.X)
-             + Math.Abs(atual.Position.Y - destino.Position.Y);
-    }
 }
