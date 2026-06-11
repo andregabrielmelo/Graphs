@@ -39,14 +39,18 @@ public class AStarTests
     }
 
     [Fact]
-    public void Find_DefaultHeuristic_StillManhattan()
+    public void Find_StepsExposeOpenNodeCosts()
     {
         var (grafo, a, _, c) = BuildLineGraph();
-        var astar = new AStar();
+        var astar = new AStar((_, _) => 0);
 
-        var rota = astar.Find(a, c, grafo);
+        astar.Find(a, c, grafo);
 
-        Assert.Equal(["A", "B", "C"], rota.Select(v => v.Name));
+        // Snapshot ocorre antes da expansão dos vizinhos: passo 0 tem abertos vazio.
+        // No passo 1 (fecha B), C está aberto com G/H/F coerentes (F = G + H).
+        var abertos = astar.Steps[1].Abertos;
+        Assert.NotEmpty(abertos);
+        Assert.All(abertos, info => Assert.Equal(info.G + info.H, info.F));
     }
 
     [Fact]
@@ -62,7 +66,7 @@ public class AStarTests
         {
             var step = astar.Steps[i];
             Assert.Equal(i + 1, step.Fechados.Count);
-            Assert.Empty(step.Abertos.Intersect(step.Fechados));
+            Assert.Empty(step.Abertos.Select(info => info.Vertex).Intersect(step.Fechados));
             Assert.Equal(step.G + step.H, step.F);
         }
         Assert.Equal(c, astar.Steps[^1].Fechado);

@@ -72,4 +72,14 @@ public class WeightedMatrixLoaderTests
         Assert.Equal(5, PesoEntre(congestionado, v["B"], v["Cé"]));
         Assert.Equal(10, PesoEntre(grafo, v["A"], v["B"])); // original intacto
     }
+
+    [Fact]
+    public void PesoDoTrecho_BuscaNasDuasDirecoes()
+    {
+        var matriz = WeightedMatrixLoader.Parse(Json, aliases: null);
+        var (grafo, v) = WeightedMatrixLoader.BuildGraph(matriz);
+
+        Assert.Equal(10, CongestionHelper.PesoDoTrecho(grafo, v["A"], v["B"]));
+        Assert.Equal(10, CongestionHelper.PesoDoTrecho(grafo, v["B"], v["A"]));
+    }
 }
