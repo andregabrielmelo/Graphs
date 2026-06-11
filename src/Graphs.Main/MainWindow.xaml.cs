@@ -21,6 +21,7 @@ public partial class MainWindow : Window
     private List<Vertex>? _rotaCongestionada;
     private double _custoCongestionado;
     private List<(Vertex De, Vertex Para)> _trechosCongestionados = [];
+    private double _fatorAtual;
 
     private IReadOnlyList<AStarStep>? _steps;
     private int _currentStep;
@@ -156,6 +157,7 @@ public partial class MainWindow : Window
         if (!TrySelecionarRota(out var origem, out var destino)) return;
 
         _trechosCongestionados = CongestionHelper.TrechosDaRota(_rotaNormal);
+        _fatorAtual = fator;
         var grafoCongestionado = CongestionHelper.ComCongestionamento(
             _grafoNormal, _trechosCongestionados, fator);
 
@@ -167,7 +169,7 @@ public partial class MainWindow : Window
         etapasList.Items.Clear();
         etapasTitulo.Text = $"Etapas — Cenário Congestionado (fator ×{fator:0.#})";
 
-        MostrarComparacao();
+        MostrarComparacao(grafoCongestionado);
         DrawGraph();
     }
 
@@ -190,7 +192,7 @@ public partial class MainWindow : Window
         return true;
     }
 
-    private void MostrarComparacao()
+    private void MostrarComparacao(Graph grafoCongestionado)
     {
         if (_rotaNormal is null || _rotaCongestionada is null) return;
 
@@ -200,20 +202,39 @@ public partial class MainWindow : Window
             return;
         }
 
+        // Pesos alterados, trecho a trecho (antes → depois)
+        string trechos = string.Join("\n", _trechosCongestionados.Select(t =>
+        {
+            double antes = CongestionHelper.PesoDoTrecho(_grafoNormal, t.De, t.Para);
+            return $"  {t.De.Name}–{t.Para.Name}: {antes:0} → {antes * _fatorAtual:0} km";
+        }));
+
+        // Quanto custaria insistir na rota normal com trânsito
+        double custoNormalComTransito =
+            CongestionHelper.CustoDaRota(grafoCongestionado, _rotaNormal);
+
         // Primeiro ponto onde as rotas divergem
         int i = 0;
         while (i < _rotaNormal.Count && i < _rotaCongestionada.Count &&
                _rotaNormal[i] == _rotaCongestionada[i])
             i++;
+        bool identicas = i >= _rotaNormal.Count && i >= _rotaCongestionada.Count;
 
-        string divergencia = i >= _rotaNormal.Count && i >= _rotaCongestionada.Count
-            ? "Rotas idênticas — congestionamento não foi suficiente para forçar desvio."
-            : $"Trânsito força desvio a partir de {_rotaNormal[Math.Max(0, i - 1)].Name}.";
+        string porque = identicas
+            ? $"POR QUÊ MANTEVE: mesmo com trânsito, a rota normal custa " +
+              $"{custoNormalComTransito:0} km e qualquer desvio custaria mais — " +
+              $"A* fecha sempre o menor F, então enfrenta o congestionamento."
+            : $"POR QUÊ DESVIOU: insistir na rota normal custaria {custoNormalComTransito:0} km " +
+              $"com trânsito; o desvio custa {_custoCongestionado:0} km " +
+              $"({custoNormalComTransito - _custoCongestionado:0} km a menos). " +
+              $"A* fecha sempre o menor F, então abandona a rota normal " +
+              $"a partir de {_rotaNormal[Math.Max(0, i - 1)].Name}.";
 
         comparacaoText.Text =
             $"NORMAL ({_custoNormal:0} km): {RotaTexto(_rotaNormal)}\n" +
-            $"CONGESTIONADA ({_custoCongestionado:0} km): {RotaTexto(_rotaCongestionada)}\n" +
-            divergencia;
+            $"CONGESTIONADA ({_custoCongestionado:0} km): {RotaTexto(_rotaCongestionada)}\n\n" +
+            $"Trechos congestionados (×{_fatorAtual:0.#}):\n{trechos}\n\n" +
+            porque;
         statusText.Text = "";
     }
 
@@ -243,7 +264,8 @@ public partial class MainWindow : Window
         etapasList.ScrollIntoView(etapasList.Items[^1]);
 
         // Estado atual das listas (layout do cenário 1 do colega)
-        listaAbertaBox.Text = string.Join(", ", step.Abertos.Select(v => v.Name));
+        listaAbertaBox.Text = string.Join(", ",
+            step.Abertos.Select(i => $"{i.Vertex.Name} (F={i.F:0.#})"));
         listaFechadaBox.Text = string.Join(", ", step.Fechados.Select(v => v.Name));
 
         _currentStep++;
@@ -314,6 +336,29 @@ public partial class MainWindow : Window
         if (_rotaCongestionada is not null)
             foreach (var (de, para) in CongestionHelper.TrechosDaRota(_rotaCongestionada))
                 DesenharLinha(pontos, de, para, Brushes.Crimson, 3, tracejada: false);
+
+        // Rótulos de peso dos trechos congestionados — por último, na frente das linhas
+        foreach (var (de, para) in _trechosCongestionados)
+        {
+            double pesoNovo =
+                CongestionHelper.PesoDoTrecho(_grafoNormal, de, para) * _fatorAtual;
+            var rotulo = new TextBlock
+            {
+                Text = $"{pesoNovo:0} km",
+                FontSize = 10,
+                FontWeight = FontWeights.Bold,
+                Foreground = Brushes.DarkOrange,
+                Background = new SolidColorBrush(Color.FromArgb(0xCC, 0xFF, 0xFF, 0xFF)),
+                Padding = new Thickness(2, 0, 2, 0),
+            };
+            rotulo.Measure(new Size(double.PositiveInfinity, double.PositiveInfinity));
+            Point meio = new(
+                (pontos[de].X + pontos[para].X) / 2,
+                (pontos[de].Y + pontos[para].Y) / 2);
+            Canvas.SetLeft(rotulo, meio.X - rotulo.DesiredSize.Width / 2);
+            Canvas.SetTop(rotulo, meio.Y - rotulo.DesiredSize.Height / 2);
+            graphCanvas.Children.Add(rotulo);
+        }
 
         // Vértices
         foreach (var (nome, vertex) in _vertices)
